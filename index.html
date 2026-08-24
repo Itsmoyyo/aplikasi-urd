@@ -595,6 +595,9 @@
                   if (fetchedData.validatedPages) {
                       setValidatedPages(fetchedData.validatedPages);
                   }
+                  if (fetchedData.isFinalVerified !== undefined) {
+                      setIsFinalVerified(fetchedData.isFinalVerified);
+                  }
                 }
               } catch (error) { console.error("Init Error:", error); } finally { if (isMounted) setLoading(false); }
             };
