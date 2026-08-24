@@ -646,7 +646,8 @@
             setAutoSaveStatus('Menyimpan...');
             try {
               const docRef = db.doc(`qontak_urds/${formId}`);
-              await docRef.set({ ...formData, validatedPages });
+              // Perbaikan: Simpan juga status isFinalVerified ke database
+              await docRef.set({ ...formData, validatedPages, isFinalVerified });
               showToast("✅ Data berhasil disimpan!");
               setAutoSaveStatus('Tersimpan ✅');
               setTimeout(() => setAutoSaveStatus(''), 3000);
