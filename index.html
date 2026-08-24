@@ -465,6 +465,11 @@
           const [isFinalVerified, setIsFinalVerified] = useState(false);
           const [showFinalModal, setShowFinalModal] = useState(false);
           const [activeChatbotIndex, setActiveChatbotIndex] = useState(0);
+          
+          // State untuk Lock/Unlock
+          const [unlockPinFromDb, setUnlockPinFromDb] = useState(null);
+          const [showUnlockModal, setShowUnlockModal] = useState(false);
+          const [pinInput, setPinInput] = useState('');
 
           const [masterData, setMasterData] = useState({
             industries: ['Consumer Retail Product / Offline Store', 'Agency, Media & Entertainment', 'Agriculture, Forestry, Fishing and Hunting', 'Architecture & Interior Design'],
@@ -598,6 +603,9 @@
                   if (fetchedData.isFinalVerified !== undefined) {
                       setIsFinalVerified(fetchedData.isFinalVerified);
                   }
+                  if (fetchedData.unlockPin !== undefined) {
+                      setUnlockPinFromDb(fetchedData.unlockPin);
+                  }
                 }
               } catch (error) { console.error("Init Error:", error); } finally { if (isMounted) setLoading(false); }
             };
@@ -649,8 +657,6 @@
             setAutoSaveStatus('Menyimpan...');
             try {
               const docRef = db.doc(`qontak_urds/${formId}`);
-              
-              // PERBAIKAN: Tangkap paksaan nilai true jika datang dari tombol Verifikasi Akhir
               const finalStatus = forceFinalVerify === true ? true : isFinalVerified;
               
               const dataToSave = { 
@@ -659,7 +665,10 @@
                   isFinalVerified: finalStatus 
               };
               
-              await docRef.set(dataToSave);
+              // Menggunakan set dengan merge: true agar bisa Create (Buat Baru) dan Update sekaligus
+              await docRef.set(dataToSave, { merge: true });
+              
+              setIsFinalVerified(finalStatus);
               showToast("✅ Data berhasil disimpan!");
               setAutoSaveStatus('Tersimpan ✅');
               setTimeout(() => setAutoSaveStatus(''), 3000);
@@ -669,8 +678,74 @@
               setAutoSaveStatus('Gagal menyimpan ❌');
             } finally { setSaving(false); }
           };
+
+          const handleUnlockForm = async () => {
+              try {
+                  // Minta E-Form mengambil data TERBARU dari database saat tombol ditekan
+                  const docRef = db.doc(`qontak_urds/${formId}`);
+                  const docSnap = await docRef.get();
+                  
+                  if (docSnap.exists) {
+                      const currentData = docSnap.data();
+                      const realPin = currentData.unlockPin;
+                      
+                      // Cocokkan PIN yang diketik dengan PIN asli dari database
+                      if (realPin && pinInput.trim() === realPin) {
+                          // Update DB untuk mencabut status verified dan menghapus PIN
+                          await docRef.update({
+                              isFinalVerified: false,
+                              unlockPin: firebase.firestore.FieldValue.delete()
+                          });
+                          
+                          setIsFinalVerified(false);
+                          setUnlockPinFromDb(null);
+                          setShowUnlockModal(false);
+                          setPinInput('');
+                          showToast("✅ Kunci form berhasil dibuka! Anda dapat mengedit kembali.");
+                      } else {
+                          showToast("❌ PIN yang Anda masukkan salah.");
+                      }
+                  } else {
+                      showToast("❌ Data form tidak ditemukan.");
+                  }
+              } catch (error) {
+                  console.error(error);
+                  showToast("❌ Gagal memproses permintaan (Cek koneksi internet).");
+              }
+          };
           
-          // MENGGUNAKAN NATIVE BROWSER PRINT KARENA LEBIH STABIL UNTUK TABEL KOMPLEKS
+          const handlePinDigitChange = (index, value) => {
+              if (value && !/^[0-9]$/.test(value)) return; // Hanya izinkan angka
+              let currentPin = pinInput.split('');
+              currentPin[index] = value;
+              setPinInput(currentPin.join(''));
+              
+              // Pindah kursor otomatis ke kotak selanjutnya
+              if (value && index < 5) {
+                  const nextEl = document.getElementById(`pin-${index + 1}`);
+                  if (nextEl) nextEl.focus();
+              }
+          };
+
+          const handlePinKeyDown = (index, e) => {
+              // Pindah kursor otomatis mundur jika menekan backspace saat kotak kosong
+              if (e.key === 'Backspace' && !pinInput[index] && index > 0) {
+                  const prevEl = document.getElementById(`pin-${index - 1}`);
+                  if (prevEl) prevEl.focus();
+              }
+          };
+
+          const handlePinPaste = (e) => {
+              e.preventDefault();
+              const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+              if (pasted) {
+                  setPinInput(pasted);
+                  const nextIndex = Math.min(pasted.length, 5);
+                  const nextEl = document.getElementById(`pin-${nextIndex === 6 ? 5 : nextIndex}`);
+                  if (nextEl) nextEl.focus();
+              }
+          };
+
           const handleExportPDF = (type = 'main') => {
             setExportType(type);
             setToastMessage("Menyiapkan format cetak... Silakan pilih 'Save as PDF' di dialog print browser.");
@@ -1362,12 +1437,12 @@
                        #chatbot-print-section { 
                            overflow: visible !important; 
                            width: 100% !important; 
-                           zoom: 0.75; /* Skala otomatis untuk browser berbasis Chromium (Chrome/Edge) agar tabel tidak terpotong */
+                           zoom: 0.75; 
                        }
                        .is-waflow-export .waflow-table-container {
                            overflow: visible !important; 
                            width: 100% !important; 
-                           zoom: 0.75; /* Skala agar tabel WA Flow muat sempurna di A4 Portrait */
+                           zoom: 0.75; 
                        }
                        #chatbot-print-section table, .is-waflow-export table { 
                            width: max-content !important; 
@@ -1383,7 +1458,54 @@
                     }
                  `}</style>
               )}
-              {toastMessage && (<div className="fixed top-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in">{toastMessage}</div>)}
+              {toastMessage && (<div className="fixed top-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg z-[9999] animate-fade-in font-bold">{toastMessage}</div>)}
+
+              {}
+              {showUnlockModal && (
+                  <div className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center p-4">
+                      <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-fade-in text-center">
+                          <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                          </div>
+                          <h3 className="text-lg font-bold text-gray-900 mb-2">Buka Kunci Form</h3>
+                          <p className="text-gray-600 mb-6 text-sm">Masukkan 6-digit PIN yang Anda dapatkan dari Tim Qontak untuk mengedit form ini.</p>
+                          
+                          <div className="flex justify-center gap-2 sm:gap-3 mb-6" onPaste={handlePinPaste}>
+                              {[0, 1, 2, 3, 4, 5].map((index) => (
+                                  <input
+                                      key={index}
+                                      id={`pin-${index}`}
+                                      type="text"
+                                      maxLength="1"
+                                      value={pinInput[index] || ''}
+                                      onChange={(e) => handlePinDigitChange(index, e.target.value)}
+                                      onKeyDown={(e) => handlePinKeyDown(index, e)}
+                                      className="allow-click w-10 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-800 bg-slate-50 shadow-inner"
+                                      autoComplete="off"
+                                  />
+                              ))}
+                          </div>
+                          
+                          <div className="flex justify-end gap-3 w-full">
+                              <button onClick={() => { setShowUnlockModal(false); setPinInput(''); }} className="allow-click flex-1 px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-bold transition-colors">Batal</button>
+                              <button onClick={handleUnlockForm} disabled={pinInput.length !== 6} className="allow-click flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors shadow-md">Buka Kunci</button>
+                          </div>
+                      </div>
+                  </div>
+              )}
+
+              {}
+              {!isExporting && isFinalVerified && (
+                  <div className="fixed top-0 left-0 right-0 bg-amber-100 border-b-2 border-amber-400 text-amber-900 px-4 py-3 z-[100] shadow-md flex flex-col sm:flex-row items-center justify-center gap-4 text-sm font-bold">
+                      <div className="flex items-center gap-2">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                          Form URD ini telah disetujui dan dikunci secara permanen.
+                      </div>
+                      <button onClick={() => setShowUnlockModal(true)} className="allow-click bg-amber-500 hover:bg-amber-600 text-white px-4 py-1.5 rounded-full text-xs shadow transition-colors">
+                          Buka Kunci (Perlu PIN)
+                      </button>
+                  </div>
+              )}
 
               {!isExporting && (
                  <div className="fixed bottom-6 left-6 z-40 flex flex-col gap-2">
@@ -1394,7 +1516,7 @@
                         </button>
                     )}
                     {isFinalVerified && (
-                        <div className="bg-emerald-600 text-white font-bold py-3 px-6 rounded-full shadow-lg flex items-center gap-2">
+                        <div className="bg-emerald-600 text-white font-bold py-3 px-6 rounded-full shadow-lg flex items-center gap-2 cursor-default">
                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
                            Data Terverifikasi
                         </div>
@@ -1428,16 +1550,19 @@
                        </div>
                    )}
                    <div className="flex flex-col gap-3">
-                     <button onClick={copyToClipboard} title="Salin Link Klien" className="w-12 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-lg flex items-center justify-center transition-transform transform hover:scale-110">
+                     <button onClick={copyToClipboard} title="Salin Link Klien" className="allow-click w-12 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-lg flex items-center justify-center transition-transform transform hover:scale-110">
                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
                      </button>
-                     <button onClick={handleSaveDraft} disabled={saving} title="Simpan Draf" className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-transform transform hover:scale-110 disabled:opacity-50">
-                       {saving ? (
-                         <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                       ) : (
-                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
-                       )}
-                     </button>
+                     {/* Tombol Save disembunyikan jika form terkunci agar tidak membingungkan */}
+                     {!isFinalVerified && (
+                         <button onClick={handleSaveDraft} disabled={saving} title="Simpan Draf" className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-transform transform hover:scale-110 disabled:opacity-50">
+                           {saving ? (
+                             <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                           ) : (
+                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
+                           )}
+                         </button>
+                     )}
                    </div>
                  </div>
               )}
@@ -1457,10 +1582,15 @@
                  </div>
               )}
 
-              <div id="printable-document" className={isExporting ? `bg-white text-black print-format w-full exporting-mode ${exportType === 'chatbot' ? 'is-chatbot-export' : exportType === 'waflow' ? 'is-waflow-export' : ''}` : "flex flex-col"}>
+              {}
+              <div id="printable-document" className={isExporting ? `bg-white text-black print-format w-full exporting-mode ${exportType === 'chatbot' ? 'is-chatbot-export' : exportType === 'waflow' ? 'is-waflow-export' : ''}` : `flex flex-col relative ${isFinalVerified ? 'locked-form-mode mt-8' : ''}`}>
+                
+                {/* TAMENG TRANSPARAN UNTUK MEMBLOKIR KLIK 100% SAAT TERKUNCI */}
+                {!isExporting && isFinalVerified && (
+                    <div className="absolute inset-0 z-[60] bg-transparent" title="Form telah dikunci dan tidak dapat diedit"></div>
+                )}
                 
                 {/* ================= PAGE 1 ================= */}
-                {}
                 {isPageActive(1) && (
                 <div className={`print-section ${safeCurrentPage === 1 || exportType === 'main' ? 'block' : 'hidden'} ${exportType === 'main' ? 'mb-10' : ''}`}>
                   <div className="animate-fade-in">
@@ -1855,7 +1985,7 @@
                           <div className="flex flex-col items-center gap-3">
                               {/* Action Buttons */}
                               <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
-                                  <button onClick={() => handleExportPDF('main')} disabled={!isFinalVerified} className={`flex items-center justify-center gap-2 px-6 py-2 rounded-lg font-bold text-sm transition-colors shadow-sm min-w-[180px] ${isFinalVerified ? 'bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600' : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'}`}>
+                                  <button onClick={() => handleExportPDF('main')} disabled={!isFinalVerified} className={`allow-click flex items-center justify-center gap-2 px-6 py-2 rounded-lg font-bold text-sm transition-colors shadow-sm min-w-[180px] ${isFinalVerified ? 'bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600' : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'}`}>
                                     🖨️ Download PDF
                                   </button>
                               </div>
@@ -2816,7 +2946,7 @@
                          
                          {!isExporting && !isSkipped && (
                            <div className="flex justify-end mb-4">
-                               <button onClick={() => handleExportPDF('waflow')} className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-1.5 px-4 text-[13px] rounded-md shadow flex items-center gap-2 transition-transform transform hover:scale-105">
+                               <button onClick={() => handleExportPDF('waflow')} className="allow-click bg-orange-500 hover:bg-orange-600 text-white font-semibold py-1.5 px-4 text-[13px] rounded-md shadow flex items-center gap-2 transition-transform transform hover:scale-105">
                                   <span>📄 Download (PDF)</span>
                                </button>
                            </div>
@@ -2998,7 +3128,7 @@
                              <table className="w-full border-collapse border border-black text-[13px] min-w-full">
                                <thead>
                                  <tr className="bg-[#a4c2f4] avoid-break-row">
-                                    <th colSpan="2" className="border border-black p-2 font-bold text-center">Channels</th><th className="border border-black p-2 font-bold text-center w-24">Chatbot</th><th className="border border-black p-2 font-bold text-center w-64">Remarks</th><th className="border border-black p-2 font-bold text-center w-32">Link</th>
+                                    <th colSpan="2" className="border border-black p-2 font-bold text-center">Channels</th><th className="border border-black p-2 font-bold text-center w-16">Chatbot</th><th className="border border-black p-2 font-bold text-center w-48">Remarks</th><th className="border border-black p-2 font-bold text-center w-64">Link</th>
                                  </tr>
                                </thead>
                                <tbody>
@@ -3011,10 +3141,10 @@
                                      ) : (
                                         <td className="border border-black p-2 text-center bg-white"><input type="checkbox" checked={channel.chatbot} onChange={(e) => handleChannelChange(index, 'chatbot', e.target.checked)} className="w-4 h-4 cursor-pointer"/></td>
                                      )}
-                                     <td className="border border-black p-0 bg-gray-200"><input type="text" value={channel.remarks} readOnly className="w-full h-full min-h-[36px] px-2 outline-none bg-transparent cursor-not-allowed text-gray-700 text-sm" /></td>
+                                     <td className="border border-black p-2 bg-gray-200 text-gray-700 text-[13px] whitespace-pre-wrap leading-tight">{channel.remarks}</td>
                                      <td className="border border-black p-2 bg-[#ffff00]">
                                         {channel.link ? (
-                                           <a href={channel.link} target="_blank" rel="noreferrer" className="text-blue-700 hover:underline text-[11px] break-all leading-tight inline-block font-medium">{channel.link}</a>
+                                           <a href={channel.link} target="_blank" rel="noreferrer" className="text-blue-700 hover:underline text-[11.5px] break-all block leading-relaxed font-medium">{channel.link}</a>
                                         ) : (
                                            <span className="text-gray-400 italic text-[12px]">-</span>
                                         )}
@@ -3048,7 +3178,7 @@
                        <div className={`mb-8 bg-white ${isExporting ? 'p-0 shadow-none border-none' : 'p-6 md:p-8 rounded-lg shadow-sm border border-gray-200'}`}>
                          {!isExporting && !isSkipped && (
                            <div className="flex justify-end mb-4">
-                               <button onClick={() => handleExportPDF('chatbot')} className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-1.5 px-4 text-[13px] rounded-md shadow flex items-center gap-2 transition-transform transform hover:scale-105">
+                               <button onClick={() => handleExportPDF('chatbot')} className="allow-click bg-orange-500 hover:bg-orange-600 text-white font-semibold py-1.5 px-4 text-[13px] rounded-md shadow flex items-center gap-2 transition-transform transform hover:scale-105">
                                   <span>📄 Download (PDF) Chatbot Aktif</span>
                                </button>
                            </div>
@@ -3644,6 +3774,30 @@
       .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 5px; }
       .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 5px; }
       .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
+      
+      /* ========================================================= */
+      /* CSS KHUSUS UNTUK MEMBLOKIR EDIT SAAT FORM TERKUNCI */
+      /* ========================================================= */
+      .locked-form-mode {
+          opacity: 0.95;
+      }
+      .locked-form-mode input:not(.allow-click), 
+      .locked-form-mode textarea:not(.allow-click), 
+      .locked-form-mode select:not(.allow-click),
+      .locked-form-mode button:not(.allow-click) {
+          pointer-events: none !important;
+      }
+      /* Menggelapkan sedikit input agar terlihat tidak bisa diedit */
+      .locked-form-mode input[type="text"]:not(.allow-click), 
+      .locked-form-mode textarea:not(.allow-click), 
+      .locked-form-mode select:not(.allow-click) {
+          background-color: #f9fafb !important;
+          color: #6b7280 !important;
+      }
+      .locked-form-mode input[type="checkbox"]:not(.allow-click) {
+          filter: grayscale(100%) opacity(0.5);
+      }
+      /* ========================================================= */
       
       /* MEDIA PRINT: Pengaturan CSS khusus saat Browser Print Dialog terbuka */
       @media print {
