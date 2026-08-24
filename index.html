@@ -640,14 +640,23 @@
              document.body.removeChild(textArea);
           };
 
-          const handleSaveDraft = async () => {
+          const handleSaveDraft = async (forceFinalVerify = false) => {
             if (!user || !db || !formId) { showToast("Gagal menyimpan: Database terputus."); return; }
             setSaving(true);
             setAutoSaveStatus('Menyimpan...');
             try {
               const docRef = db.doc(`qontak_urds/${formId}`);
-              // Perbaikan: Simpan juga status isFinalVerified ke database
-              await docRef.set({ ...formData, validatedPages, isFinalVerified });
+              
+              // PERBAIKAN: Tangkap paksaan nilai true jika datang dari tombol Verifikasi Akhir
+              const finalStatus = forceFinalVerify === true ? true : isFinalVerified;
+              
+              const dataToSave = { 
+                  ...formData, 
+                  validatedPages, 
+                  isFinalVerified: finalStatus 
+              };
+              
+              await docRef.set(dataToSave);
               showToast("✅ Data berhasil disimpan!");
               setAutoSaveStatus('Tersimpan ✅');
               setTimeout(() => setAutoSaveStatus(''), 3000);
@@ -1400,7 +1409,8 @@
                               <button onClick={() => {
                                   setIsFinalVerified(true);
                                   setShowFinalModal(false);
-                                  handleSaveDraft();
+                                  // PERBAIKAN: Kirim instruksi "true" secara paksa ke fungsi simpan
+                                  handleSaveDraft(true);
                               }} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-colors">Ya, Data Sudah Benar</button>
                           </div>
                       </div>
