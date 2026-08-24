@@ -27,7 +27,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, Fragment } = React;
+        const { useState, useEffect, Fragment, useRef } = React;
 
         const firebaseConfig = {
           apiKey: "AIzaSyBKTBqch1O39D8JdNx5S_EUkm2m5D-jXyg",
@@ -84,9 +84,16 @@
           { id: 19, category: 'Integration', module: 'Workflow', unlock: false, priority: false }
         ];
 
-        const defaultChannels = [
+        const defaultEcommerce = [
           { id: 'tokopedia', name: 'Tokopedia', use: false, chatbot: false, chatbotDisabled: true, remarks: 'No MUV Deduction', link: 'https://help-center.qontak.com/hc/id/articles/16319836304793-Bagaimana-Cara-Request-Integration-Tokopedia-Chat', isOrange: false },
           { id: 'shopee', name: 'Shopee', use: false, chatbot: false, chatbotDisabled: true, remarks: 'No MUV Deduction, must have seller type', link: 'https://help-center.qontak.com/hc/id/articles/31996013959065-Bagaimana-Cara-Mengintegrasikan-Shopee-dengan-Qontak-Omnichannel', isOrange: false },
+          { id: 'tiktok_shop', name: 'TikTok Shop', use: false, chatbot: false, chatbotDisabled: true, remarks: 'TikTok Shop Integration', link: 'https://docs.google.com/document/d/1FY4putI4NguLaEvK0wEllzGyN3NpSk-I/edit', isOrange: false },
+          { id: 'lazada', name: 'Lazada', use: false, chatbot: false, chatbotDisabled: true, remarks: 'Lazada Seller Center', link: 'https://docs.google.com/presentation/d/1skLsyVl1ynzkwiErgqce9MloEKQqyqfIrsKkevbuqbQ/edit?slide=id.g3e90bbe2f3e_0_68#slide=id.g3e90bbe2f3e_0_68', isOrange: false },
+          { id: 'blibli', name: 'Blibli', use: false, chatbot: false, chatbotDisabled: true, remarks: 'Blibli Seller Center', link: 'https://docs.google.com/document/d/1aywU7eKvMUjBwnNG23NCcMgGyTzn8JYo/edit', isOrange: false },
+          { id: 'wa_catalog', name: 'Whatsapp Catalog', use: false, chatbot: false, chatbotEneble: true, remarks: '', link: '', isOrange: false }
+        ];
+
+        const defaultChannels = [
           { id: 'google', name: 'Google My Business', use: false, chatbot: false, chatbotDisabled: true, remarks: '', link: 'https://help-center.qontak.com/hc/id/articles/38951713398937-Bagaimana-Cara-Mengelola-dan-Mengintegrasikan-Qontak-dengan-Google-Business', isOrange: false },
           { id: 'mobile_app', name: 'Mobile App Chat', use: false, chatbot: false, chatbotDisabled: false, remarks: '(Chatbot Name)', link: 'https://help-center.qontak.com/hc/id/articles/22614405832473-Bagaimana-Cara-Mengintegrasikan-Mobile-Chat-di-Omnichannel-Qontak', isOrange: false },
           { id: 'web_chat', name: 'Web Chat', use: true, chatbot: false, chatbotDisabled: false, remarks: '(Chatbot Name)', link: 'https://help-center.qontak.com/hc/id/articles/5642474620825-Bagaimana-cara-Membuat-Mengintegrasikan-dan-Melakukan-Kustomisasi-Qontak-Web-Chat', isOrange: false },
@@ -108,47 +115,47 @@
         ];
 
         const defaultTimelineDetailed = [
-          { id: 't1', no: '1', activity: 'Kick Off Meeting & Meeting Requirement', pic: 'Qontak / Client', status: 'Open', duration: '1', start: '2026-08-13', end: '2026-08-13', comment: '', lvl: 0 },
-          { id: 't2', no: '2', activity: 'Requirement Gathering', pic: '', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 0 },
-          { id: 't2.1', no: '2.1', activity: 'CRM', pic: '', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 1 },
-          { id: 't2.1.1', no: '', activity: 'Users', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.1.2', no: '', activity: 'Master Roles', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.1.3', no: '', activity: 'Contacts', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.1.4', no: '', activity: 'Companies', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.1.5', no: '', activity: 'Deals Pipeline', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.1.6', no: '', activity: 'Deals', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.1.7', no: '', activity: 'Task', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.1.8', no: '', activity: 'Products', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.2', no: '2.2', activity: 'Omnichannel', pic: '', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 1 },
-          { id: 't2.2.1', no: '', activity: 'Users', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.2.2', no: '', activity: 'Master Roles', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.2.3', no: '', activity: 'WABA Information', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.2.4', no: '', activity: 'FBBM Information', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.3', no: '2.3', activity: 'Chatbot', pic: '', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 1 },
-          { id: 't2.3.1', no: '', activity: 'Users', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: 'Same with Omnichannel', lvl: 2 },
-          { id: 't2.3.2', no: '', activity: 'Master Roles', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: 'Same with Omnichannel', lvl: 2 },
-          { id: 't2.3.3', no: '', activity: 'FAQs', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.3.4', no: '', activity: 'Flow', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.4', no: '2.4', activity: 'Call Centre', pic: '', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 1 },
-          { id: 't2.4.1', no: '', activity: 'Users', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.4.2', no: '', activity: 'Master Roles', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.4.3', no: '', activity: 'Call Recording', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.4.4', no: '', activity: 'IVR', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't2.4.5', no: '', activity: 'Wallboard', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2 },
-          { id: 't3', no: '3', activity: 'Requirement Sign Off', pic: 'Qontak / Client', status: 'Open', duration: '1', start: '2026-08-20', end: '2026-08-20', comment: '', lvl: 0 },
-          { id: 't4', no: '4', activity: 'Development Phase I', pic: '', status: 'Open', duration: '15', start: '2026-08-21', end: '2026-09-10', comment: '', lvl: 0 },
-          { id: 't4.1', no: '', activity: 'Sub Development - CRM - Configuration', pic: 'Qontak', status: 'Open', duration: '7', start: '2026-08-21', end: '2026-08-31', comment: '', lvl: 2 },
-          { id: 't4.2', no: '', activity: 'Sub Development - Omnichannel I - FBBM Creation & Onboard', pic: 'Qontak / Meta', status: 'Open', duration: '10', start: '2026-08-21', end: '2026-09-03', comment: '', lvl: 2 },
-          { id: 't4.3', no: '', activity: 'Sub Development - Omnichannel II - Configuration', pic: 'Qontak', status: 'Open', duration: '5', start: '2026-09-04', end: '2026-09-10', comment: '', lvl: 2 },
-          { id: 't4.4', no: '', activity: 'Sub Development - Chatbot - Configuration', pic: 'Qontak', status: 'Open', duration: '10', start: '2026-08-21', end: '2026-09-03', comment: '', lvl: 2 },
-          { id: 't4.5', no: '', activity: 'Sub Development - Call Centre - Configuration', pic: 'Qontak', status: 'Open', duration: '7', start: '2026-08-21', end: '2026-08-31', comment: 'Without Premium Number', lvl: 2 },
-          { id: 't4.6', no: '', activity: 'Sub Development - Upload Requirement Data', pic: 'Qontak', status: 'Open', duration: '10', start: '2026-08-21', end: '2026-09-03', comment: '', lvl: 2 },
-          { id: 't5', no: '5', activity: 'Internal SIT and QA by Qontak', pic: 'Qontak', status: 'Open', duration: '1', start: '2026-09-11', end: '2026-09-11', comment: 'Proceed to next item if no issue', lvl: 0 },
-          { id: 't6', no: '6', activity: 'Knowledge Transfer', pic: 'Qontak / Client', status: 'Open', duration: '1', start: '2026-09-14', end: '2026-09-14', comment: '', lvl: 0 },
-          { id: 't6.1', no: '', activity: 'Training I', pic: 'Qontak', status: 'Open', duration: '1', start: '2026-09-14', end: '2026-09-14', comment: '', lvl: 2 },
-          { id: 't7', no: '7', activity: 'Specialist Survey', pic: 'Client', status: 'Open', duration: '1', start: '2026-09-14', end: '2026-09-14', comment: 'Proceed while training', lvl: 0 },
-          { id: 't8', no: '8', activity: 'UAT', pic: 'Client', status: 'Open', duration: '3', start: '2026-09-14', end: '2026-09-16', comment: 'Proceed while training', lvl: 0 },
-          { id: 't9', no: '9', activity: 'BAST Sign-Off / Go Live', pic: 'Qontak / Client', status: 'Open', duration: '1', start: '2026-09-17', end: '2026-09-17', comment: '', lvl: 0 },
+          { id: 't1', no: '1', activity: 'Kick Off Meeting & Meeting Requirement', pic: 'Qontak / Client', status: 'Open', duration: '1', start: '2026-08-13', end: '2026-08-13', comment: '', lvl: 0, phase: 1 },
+          { id: 't2', no: '2', activity: 'Requirement Gathering', pic: '', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 0, phase: 1 },
+          { id: 't2.1', no: '2.1', activity: 'CRM', pic: '', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 1, phase: 1 },
+          { id: 't2.1.1', no: '', activity: 'Users', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.1.2', no: '', activity: 'Master Roles', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.1.3', no: '', activity: 'Contacts', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.1.4', no: '', activity: 'Companies', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.1.5', no: '', activity: 'Deals Pipeline', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.1.6', no: '', activity: 'Deals', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.1.7', no: '', activity: 'Task', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.1.8', no: '', activity: 'Products', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.2', no: '2.2', activity: 'Omnichannel', pic: '', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 1, phase: 1 },
+          { id: 't2.2.1', no: '', activity: 'Users', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.2.2', no: '', activity: 'Master Roles', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.2.3', no: '', activity: 'WABA Information', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.2.4', no: '', activity: 'FBBM Information', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.3', no: '2.3', activity: 'Chatbot', pic: '', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 1, phase: 1 },
+          { id: 't2.3.1', no: '', activity: 'Users', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: 'Same with Omnichannel', lvl: 2, phase: 1 },
+          { id: 't2.3.2', no: '', activity: 'Master Roles', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: 'Same with Omnichannel', lvl: 2, phase: 1 },
+          { id: 't2.3.3', no: '', activity: 'FAQs', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.3.4', no: '', activity: 'Flow', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.4', no: '2.4', activity: 'Call Centre', pic: '', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 1, phase: 1 },
+          { id: 't2.4.1', no: '', activity: 'Users', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.4.2', no: '', activity: 'Master Roles', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.4.3', no: '', activity: 'Call Recording', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.4.4', no: '', activity: 'IVR', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't2.4.5', no: '', activity: 'Wallboard', pic: 'Client', status: 'Open', duration: '5', start: '2026-08-13', end: '2026-08-19', comment: '', lvl: 2, phase: 1 },
+          { id: 't3', no: '3', activity: 'Requirement Sign Off', pic: 'Qontak / Client', status: 'Open', duration: '1', start: '2026-08-20', end: '2026-08-20', comment: '', lvl: 0, phase: 1 },
+          { id: 't4', no: '4', activity: 'Development Phase I', pic: '', status: 'Open', duration: '15', start: '2026-08-21', end: '2026-09-10', comment: '', lvl: 0, phase: 1 },
+          { id: 't4.1', no: '', activity: 'Sub Development - CRM - Configuration', pic: 'Qontak', status: 'Open', duration: '7', start: '2026-08-21', end: '2026-08-31', comment: '', lvl: 2, phase: 1 },
+          { id: 't4.2', no: '', activity: 'Sub Development - Omnichannel I - FBBM Creation & Onboard', pic: 'Qontak / Meta', status: 'Open', duration: '10', start: '2026-08-21', end: '2026-09-03', comment: '', lvl: 2, phase: 1 },
+          { id: 't4.3', no: '', activity: 'Sub Development - Omnichannel II - Configuration', pic: 'Qontak', status: 'Open', duration: '5', start: '2026-09-04', end: '2026-09-10', comment: '', lvl: 2, phase: 1 },
+          { id: 't4.4', no: '', activity: 'Sub Development - Chatbot - Configuration', pic: 'Qontak', status: 'Open', duration: '10', start: '2026-08-21', end: '2026-09-03', comment: '', lvl: 2, phase: 1 },
+          { id: 't4.5', no: '', activity: 'Sub Development - Call Centre - Configuration', pic: 'Qontak', status: 'Open', duration: '7', start: '2026-08-21', end: '2026-08-31', comment: 'Without Premium Number', lvl: 2, phase: 1 },
+          { id: 't4.6', no: '', activity: 'Sub Development - Upload Requirement Data', pic: 'Qontak', status: 'Open', duration: '10', start: '2026-08-21', end: '2026-09-03', comment: '', lvl: 2, phase: 1 },
+          { id: 't5', no: '5', activity: 'Internal SIT and QA by Qontak', pic: 'Qontak', status: 'Open', duration: '1', start: '2026-09-11', end: '2026-09-11', comment: 'Proceed to next item if no issue', lvl: 0, phase: 1 },
+          { id: 't6', no: '6', activity: 'Knowledge Transfer', pic: 'Qontak / Client', status: 'Open', duration: '1', start: '2026-09-14', end: '2026-09-14', comment: '', lvl: 0, phase: 1 },
+          { id: 't6.1', no: '', activity: 'Training I', pic: 'Qontak', status: 'Open', duration: '1', start: '2026-09-14', end: '2026-09-14', comment: '', lvl: 2, phase: 1 },
+          { id: 't7', no: '7', activity: 'Specialist Survey', pic: 'Client', status: 'Open', duration: '1', start: '2026-09-14', end: '2026-09-14', comment: 'Proceed while training', lvl: 0, phase: 1 },
+          { id: 't8', no: '8', activity: 'UAT', pic: 'Client', status: 'Open', duration: '3', start: '2026-09-14', end: '2026-09-16', comment: 'Proceed while training', lvl: 0, phase: 1 },
+          { id: 't9', no: '9', activity: 'BAST Sign-Off / Go Live', pic: 'Qontak / Client', status: 'Open', duration: '1', start: '2026-09-17', end: '2026-09-17', comment: '', lvl: 0, phase: 1 },
         ];
 
         const defaultSimpleMatrix = [
@@ -382,13 +389,27 @@
            if (!dateStr) return '';
            const parts = dateStr.split('-');
            if (parts.length !== 3) return dateStr;
+           
+           // Use English month abbreviations to ensure formatting looks good and is robust
+           const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
            const [y, m, d] = parts;
-           return `${d}/${m}/${y}`;
+           const monthIndex = parseInt(m, 10) - 1;
+           
+           if (monthIndex >= 0 && monthIndex < 12) {
+               return `${d} ${monthNames[monthIndex]} ${y}`;
+           }
+           
+           return `${d}/${m}/${y}`; // Fallback if parsing fails
         };
 
         const recalculateTimelineNumbers = (timeline) => {
-           let counters = [0, 0, 0, 0, 0];
+           // We need separate counters for Phase 1 and Phase 2
+           let countersPhase1 = [0, 0, 0, 0, 0];
+           let countersPhase2 = [0, 0, 0, 0, 0];
+
            return timeline.map(item => {
+               const counters = item.phase === 2 ? countersPhase2 : countersPhase1;
+               
                counters[item.lvl] = (counters[item.lvl] || 0) + 1;
                for (let i = item.lvl + 1; i < counters.length; i++) {
                    counters[i] = 0;
@@ -470,6 +491,9 @@
           const [unlockPinFromDb, setUnlockPinFromDb] = useState(null);
           const [showUnlockModal, setShowUnlockModal] = useState(false);
           const [pinInput, setPinInput] = useState('');
+          const [revisionReason, setRevisionReason] = useState('');
+
+          const isFirstRender = useRef(true);
 
           const [masterData, setMasterData] = useState({
             industries: ['Consumer Retail Product / Offline Store', 'Agency, Media & Entertainment', 'Agriculture, Forestry, Fishing and Hunting', 'Architecture & Interior Design'],
@@ -488,10 +512,11 @@
           const [formData, setFormData] = useState({
             clientName: '', date: new Date().toISOString().split('T')[0], crmSetupType: 'Simple', systemUsageType: ['Omnichannel', 'CRM'],
             teamStructure: { qontakImplementorRole: '', qontakImplementorName: '', qontakImplementorEmail: '', qontakImplementorPhone: '', clientCLevelName: '', clientCLevelEmail: '', clientCLevelPhone: '', clientMHLevelName: '', clientMHLevelEmail: '', clientMHLevelPhone: '', clientPICName: '', clientPICEmail: '', clientPICPhone: '' },
-            generalInfo: { industry: 'Consumer Retail Product / Offline Store', industryType: 'B2C', project: 'Add DB', package: 'Qontak Sales Suite Plus' },
+            generalInfo: { industry: '', industryType: '', project: '', package: '' },
             useCases: { marketing: false, marketingDetails: '', sales: false, salesDetails: '', customerService: false, customerServiceDetails: '', notification: false, notificationDetails: '', others: false, othersSpecify: '', fbbmStatus: '', fbbmVerificationStatus: '', customerArea: '', expansionWorkflow: '', fbbmId: '' },
             features: defaultFeatures, 
             registeredUsers: [{ firstName: '', lastName: '', email: '', phone: '', division: '', roleOmni: '', roleCrm: '', teamCrm: '' }],
+            crmUsers: [{ firstName: '', lastName: '', email: '', phone: '', division: '', roleCrm: '', teamCrm: '' }],
             callCenterUsers: defaultCallCenterUsers,
             crmSimpleMatrix: defaultSimpleMatrix, crmAdvancedMatrix: defaultAdvancedMatrix,
             whatsappDetails: { fbbmId: '', waNumber: '', waDisplayName: '', profilePicture: '', businessDescription: '', businessAddress: '', businessEmail: '', businessWebsite: '' },
@@ -504,7 +529,9 @@
             taskDefaults: defaultTaskDefaults, taskCustoms: defaultTaskCustoms,
             productDefaults: defaultProductDefaults, productCustoms: defaultProductCustoms,
             callCenter: { ivr: defaultCallCenterIvr, config: defaultCallCenterConfig },
-            skippedModules: { whatsapp: false, waFlow: false, channel: false, chatbot: false, pipeline: false, contact: false, company: false, deals: false, ticket: false, task: false, product: false, callCenter: false }
+            skippedModules: { whatsapp: false, waFlow: false, channel: false, ecommerce: false, chatbot: false, pipeline: false, contact: false, company: false, deals: false, ticket: false, task: false, product: false, callCenter: false },
+            ecommerce: defaultEcommerce,
+            revisionHistory: []
           });
 
           useEffect(() => {
@@ -573,6 +600,7 @@
                      crmSetupType: fetchedData.crmSetupType || 'Simple', 
                      systemUsageType: Array.isArray(fetchedData.systemUsageType) ? fetchedData.systemUsageType : ['Omnichannel', 'CRM'],
                      registeredUsers: fetchedData.registeredUsers && fetchedData.registeredUsers.length > 0 ? fetchedData.registeredUsers : prev.registeredUsers, 
+                     crmUsers: fetchedData.crmUsers && fetchedData.crmUsers.length > 0 ? fetchedData.crmUsers : (fetchedData.registeredUsers && fetchedData.registeredUsers.length > 0 ? fetchedData.registeredUsers : prev.crmUsers),
                      callCenterUsers: fetchedData.callCenterUsers || prev.callCenterUsers,
                      crmSimpleMatrix: fetchedData.crmSimpleMatrix || defaultSimpleMatrix, 
                      crmAdvancedMatrix: fetchedData.crmAdvancedMatrix || defaultAdvancedMatrix, 
@@ -586,6 +614,7 @@
                      contactCustoms: fetchedData.contactCustoms || defaultContactCustoms,
                      companyDefaults: fetchedData.companyDefaults || defaultCompanyDefaults,
                      companyCustoms: fetchedData.companyCustoms || defaultCompanyCustoms,
+                     ecommerce: fetchedData.ecommerce || defaultEcommerce,
                      dealsDefaults: fetchedData.dealsDefaults || defaultDealsDefaults,
                      dealsCustoms: fetchedData.dealsCustoms || defaultDealsCustoms,
                      ticketDefaults: fetchedData.ticketDefaults || defaultTicketDefaults,
@@ -595,7 +624,8 @@
                      productDefaults: fetchedData.productDefaults || defaultProductDefaults,
                      productCustoms: fetchedData.productCustoms || defaultProductCustoms,
                      callCenter: fetchedData.callCenter || { ivr: defaultCallCenterIvr, config: defaultCallCenterConfig },
-                     skippedModules: fetchedData.skippedModules || prev.skippedModules
+                     skippedModules: fetchedData.skippedModules || prev.skippedModules,
+                     revisionHistory: fetchedData.revisionHistory || prev.revisionHistory
                   }));
                   if (fetchedData.validatedPages) {
                       setValidatedPages(fetchedData.validatedPages);
@@ -616,13 +646,13 @@
           useEffect(() => {
              if (loading || !formId || !user) return;
              
-             // Fitur Autosave dinonaktifkan agar tidak memakai kuota database terus-menerus.
-             // Sistem sekarang hanya mengandalkan manual save.
-             const timer = setTimeout(() => {
-                 setAutoSaveStatus('Belum disimpan ⚠️');
-             }, 1000); 
-
-             return () => clearTimeout(timer);
+             // Mencegah autosave berjalan pada render pertama (saat memuat data)
+             if (isFirstRender.current) {
+                 isFirstRender.current = false;
+                 return;
+             }
+             
+             setAutoSaveStatus('Belum disimpan ⚠️');
           }, [formData, formId, user, loading, validatedPages]);
 
           const showToast = (message) => { setToastMessage(message); setTimeout(() => setToastMessage(null), 3000); };
@@ -651,32 +681,157 @@
              document.body.removeChild(textArea);
           };
 
-          const handleSaveDraft = async (forceFinalVerify = false) => {
-            if (!user || !db || !formId) { showToast("Gagal menyimpan: Database terputus."); return; }
-            setSaving(true);
+          const handleSaveDraft = async (forceFinalVerify = false, isSilent = false, overrideValidatedPages = null, overrideFormData = null) => {
+            if (!user || !db || !formId) { 
+                if (!isSilent) showToast("Gagal menyimpan: Database terputus."); 
+                return; 
+            }
+            if (!isSilent) setSaving(true);
+            
+            // Selalu tampilkan status walau proses terjadi di belakang layar
             setAutoSaveStatus('Menyimpan...');
+            
             try {
               const docRef = db.doc(`qontak_urds/${formId}`);
               const finalStatus = forceFinalVerify === true ? true : isFinalVerified;
               
+              let updatedHistory = formData.revisionHistory || [];
               const dataToSave = { 
-                  ...formData, 
-                  validatedPages, 
+                  ...(overrideFormData || formData), 
+                  validatedPages: overrideValidatedPages || validatedPages, 
                   isFinalVerified: finalStatus 
               };
+
+              // AUTO-TRACK LOGIC: Jika final verifikasi dilakukan, bandingkan dengan snapshot lama
+              if (forceFinalVerify) {
+                  const docSnap = await docRef.get();
+                  if (docSnap.exists) {
+                      const dbData = docSnap.data();
+                      if (dbData.unlockSnapshot && dbData.pendingRevisionId) {
+                          const oldData = JSON.parse(dbData.unlockSnapshot);
+                          const changes = [];
+                          
+                          // Helper cerdas untuk menormalisasi data (menghapus undefined, null, dan string kosong)
+                          // agar Firebase vs React State tidak menghasilkan false-positive
+                          const normalize = (val) => {
+                              if (Array.isArray(val)) return val.map(normalize);
+                              if (val !== null && typeof val === 'object') {
+                                  const out = {};
+                                  Object.keys(val).sort().forEach(k => {
+                                      if (val[k] !== '' && val[k] !== null && val[k] !== undefined) {
+                                          out[k] = normalize(val[k]);
+                                      }
+                                  });
+                                  return out;
+                              }
+                              return val;
+                          };
+
+                          const isDiff = (a, b) => JSON.stringify(normalize(a)) !== JSON.stringify(normalize(b));
+
+                          // Helper untuk membandingkan obyek sederhana tingkat 1
+                          const compareObj = (oldObj, newObj, moduleName, prefix = '') => {
+                              const normOld = normalize(oldObj) || {};
+                              const normNew = normalize(newObj) || {};
+                              const keys = new Set([...Object.keys(normOld), ...Object.keys(normNew)]);
+                              keys.forEach(key => {
+                                  if (typeof normOld[key] !== 'object' && typeof normNew[key] !== 'object') {
+                                      if (normOld[key] !== normNew[key]) {
+                                          changes.push(`Halaman ${moduleName}: '${prefix}${key}' diubah dari '${normOld[key] || '-'}' menjadi '${normNew[key] || '-'}'`);
+                                      }
+                                  }
+                              });
+                          };
+
+                          // 1. Team & General Info
+                          compareObj(oldData.teamStructure, formData.teamStructure, 'Team Structure');
+                          compareObj(oldData.generalInfo, formData.generalInfo, 'General Info');
+
+                          // 2. Users
+                          if (isDiff(oldData.registeredUsers, formData.registeredUsers)) changes.push(`Halaman Users: Data tabel pengguna Omnichannel diubah`);
+                          if (isDiff(oldData.crmUsers, formData.crmUsers)) changes.push(`Halaman Users: Data tabel pengguna CRM diubah`);
+                          if (isDiff(oldData.crmSimpleMatrix, formData.crmSimpleMatrix) || isDiff(oldData.crmAdvancedMatrix, formData.crmAdvancedMatrix)) {
+                              changes.push(`Halaman Users: Hak akses / Matriks role CRM diubah`);
+                          }
+
+                          // 3. Call Center
+                          compareObj(oldData.callCenter?.config, formData.callCenter?.config, 'Call Center', 'Config ');
+                          if (isDiff(oldData.callCenter?.ivr, formData.callCenter?.ivr)) {
+                              changes.push(`Halaman Call Center: Data alur IVR / Voice diubah`);
+                          }
+                          if (isDiff(oldData.callCenterUsers, formData.callCenterUsers)) {
+                              changes.push(`Halaman Call Center: Data tabel pengguna Call Center diubah`);
+                          }
+
+                          // 4. Pengaturan Field (Company, Contact, dll)
+                          const compareModuleDefaults = (oldArr, newArr, moduleName) => {
+                              const normOld = normalize(oldArr) || [];
+                              const normNew = normalize(newArr) || [];
+                              normNew.forEach((newItem, index) => {
+                                  const oldItem = normOld.find(o => o.id === newItem.id) || normOld[index];
+                                  if (oldItem && oldItem.field) {
+                                      const oldShow = oldItem.show || false;
+                                      const newShow = newItem.show || false;
+                                      const oldMandatory = oldItem.mandatory || false;
+                                      const newMandatory = newItem.mandatory || false;
+                                      
+                                      if (oldShow !== newShow) changes.push(`Halaman ${moduleName}: Status Tampil '${newItem.field}' diubah dari '${oldShow ? 'Ya' : 'Tidak'}' menjadi '${newShow ? 'Ya' : 'Tidak'}'`);
+                                      if (oldMandatory !== newMandatory) changes.push(`Halaman ${moduleName}: Status Wajib '${newItem.field}' diubah dari '${oldMandatory ? 'Ya' : 'Tidak'}' menjadi '${newMandatory ? 'Ya' : 'Tidak'}'`);
+                                      if ((oldItem.options || '') !== (newItem.options || '')) changes.push(`Halaman ${moduleName}: Opsi '${newItem.field}' diubah dari '${oldItem.options || '-'}' menjadi '${newItem.options || '-'}'`);
+                                  }
+                              });
+                          };
+                          compareModuleDefaults(oldData.contactDefaults, formData.contactDefaults, 'Contact');
+                          compareModuleDefaults(oldData.companyDefaults, formData.companyDefaults, 'Company');
+                          compareModuleDefaults(oldData.dealsDefaults, formData.dealsDefaults, 'Deals');
+                          compareModuleDefaults(oldData.ticketDefaults, formData.ticketDefaults, 'Ticket');
+                          compareModuleDefaults(oldData.taskDefaults, formData.taskDefaults, 'Task');
+                          compareModuleDefaults(oldData.productDefaults, formData.productDefaults, 'Product');
+
+                          // 5. WhatsApp & Channel
+                          compareObj(oldData.whatsappDetails, formData.whatsappDetails, 'WhatsApp');
+                          if (isDiff(oldData.channels, formData.channels)) changes.push(`Halaman Channel: Status integrasi atau checkbox diubah`);
+                          if (isDiff(oldData.ecommerce, formData.ecommerce)) changes.push(`Halaman E-Commerce: Status integrasi marketplace diubah`);
+
+                          // 6. Complex Flow (Chatbot, WA Flow, Pipeline, Timeline)
+                          if (isDiff(oldData.chatbots, formData.chatbots)) changes.push(`Halaman Chatbot: Alur FAQ atau struktur bot diubah`);
+                          if (isDiff(oldData.pipelines, formData.pipelines)) changes.push(`Halaman Pipeline: Nama stage atau struktur pipeline diubah`);
+                          if (isDiff(oldData.waFlow, formData.waFlow)) changes.push(`Halaman WA Flow: Teks komponen atau flow form diubah`);
+                          if (isDiff(oldData.timeline, formData.timeline)) changes.push(`Halaman Timeline: Aktivitas, durasi, atau tanggal pengerjaan diubah`);
+                          
+                          const changeText = changes.length > 0 ? changes.map((c, i) => `${i + 1}. ${c}`).join('\n') : 'Tidak ada perubahan data spesifik yang terdeteksi secara otomatis.';
+                          
+                          // Update baris riwayat spesifik dengan hasil deteksi sistem
+                          updatedHistory = updatedHistory.map(rev => 
+                              rev.id === dbData.pendingRevisionId 
+                                  ? { ...rev, autoTrack: changeText } 
+                                  : rev
+                          );
+                          dataToSave.revisionHistory = updatedHistory;
+                          dataToSave.unlockSnapshot = firebase.firestore.FieldValue.delete();
+                          dataToSave.pendingRevisionId = firebase.firestore.FieldValue.delete();
+                          setFormData(prev => ({ ...prev, revisionHistory: updatedHistory }));
+                      }
+                  }
+              }
               
               // Menggunakan set dengan merge: true agar bisa Create (Buat Baru) dan Update sekaligus
               await docRef.set(dataToSave, { merge: true });
               
               setIsFinalVerified(finalStatus);
-              showToast("✅ Data berhasil disimpan!");
+              if (!isSilent) showToast("✅ Data berhasil disimpan!");
+              
               setAutoSaveStatus('Tersimpan ✅');
-              setTimeout(() => setAutoSaveStatus(''), 3000);
+              setTimeout(() => {
+                  setAutoSaveStatus(prev => prev === 'Tersimpan ✅' ? '' : prev);
+              }, 3000);
             } catch (error) { 
               console.error("Save error:", error);
-              showToast("❌ Gagal menyimpan data. Pastikan koneksi stabil."); 
+              if (!isSilent) showToast("❌ Gagal menyimpan data. Pastikan koneksi stabil."); 
               setAutoSaveStatus('Gagal menyimpan ❌');
-            } finally { setSaving(false); }
+            } finally { 
+              if (!isSilent) setSaving(false); 
+            }
           };
 
           const handleUnlockForm = async () => {
@@ -691,17 +846,35 @@
                       
                       // Cocokkan PIN yang diketik dengan PIN asli dari database
                       if (realPin && pinInput.trim() === realPin) {
-                          // Update DB untuk mencabut status verified dan menghapus PIN
+                          if (!revisionReason.trim()) {
+                              showToast("❌ Silakan isi alasan revisi terlebih dahulu.");
+                              return;
+                          }
+
+                          const newRevision = {
+                              id: Date.now().toString(),
+                              date: new Date().toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' WIB',
+                              reason: revisionReason
+                          };
+                          
+                          const updatedHistory = [...(formData.revisionHistory || []), newRevision];
+
+                          // Update DB untuk mencabut status verified, menghapus PIN, menyimpan snapshot dan menambah riwayat
                           await docRef.update({
                               isFinalVerified: false,
-                              unlockPin: firebase.firestore.FieldValue.delete()
+                              unlockPin: firebase.firestore.FieldValue.delete(),
+                              unlockSnapshot: JSON.stringify(formData), // PERBAIKAN BUG: Gunakan formData yang memiliki state lengkap sebagai Snapshot
+                              pendingRevisionId: newRevision.id, // Penanda revisi yang sedang berjalan
+                              revisionHistory: updatedHistory
                           });
                           
+                          setFormData(prev => ({ ...prev, revisionHistory: updatedHistory }));
                           setIsFinalVerified(false);
                           setUnlockPinFromDb(null);
                           setShowUnlockModal(false);
                           setPinInput('');
-                          showToast("✅ Kunci form berhasil dibuka! Anda dapat mengedit kembali.");
+                          setRevisionReason('');
+                          showToast("✅ Kunci form berhasil dibuka! Riwayat revisi telah dicatat.");
                       } else {
                           showToast("❌ PIN yang Anda masukkan salah.");
                       }
@@ -764,12 +937,13 @@
           const pagesConfig = [
             { id: 1, name: 'Team', special: false }, { id: 2, name: 'Features', special: false },
             { id: 3, name: 'Timeline', special: false }, { id: 4, name: 'Users', special: false },
-            { id: 5, name: 'WhatsApp', special: false }, { id: 17, name: 'WA Flow', special: false }, { id: 6, name: 'Channel', special: false },
+            { id: 5, name: 'WhatsApp', special: false }, { id: 17, name: 'WA Flow', special: false }, 
+            { id: 6, name: 'Channel', special: false }, { id: 19, name: 'E-Commerce', special: false },
             { id: 7, name: 'Chatbot', special: false }, { id: 8, name: 'Pipeline', special: false },
             { id: 9, name: 'Contact', special: false }, { id: 10, name: 'Company', special: false },
             { id: 11, name: 'Deals', special: false }, { id: 12, name: 'Ticket', special: false },
             { id: 13, name: 'Task', special: false }, { id: 14, name: 'Product', special: false },
-            { id: 15, name: 'Call Center', special: false }, { id: 16, name: 'Sign Off', special: true }
+            { id: 15, name: 'Call Center', special: false }, { id: 18, name: 'Revision', special: false }, { id: 16, name: 'Sign Off', special: true }
           ];
 
           // Filter navigasi & halaman secara dinamis berdasarkan checklist "Unlock"
@@ -791,10 +965,12 @@
                      case 14: return hasDeal; // Product (Mengekor ke Deal Management)
                      // Modul General (Channel, Contact, Company, Task) selalu dimunculkan
                      case 6: return true; // Channel
+                     case 19: return true; // E-Commerce
                      case 9: return true; // Contact
                      case 10: return true; // Company
                      case 13: return true; // Task
                      case 17: return true; // WA Flow
+                     case 18: return formData.revisionHistory && formData.revisionHistory.length > 0; // Halaman Revisi (Tampil jika ada riwayat)
                      default: return true; // Halaman inti, WA, & Call Center selalu muncul
                  }
              });
@@ -830,17 +1006,24 @@
 
           const handleSkipToggle = (moduleKey, pageId) => {
              const willBeSkipped = !formData.skippedModules[moduleKey];
-             setFormData(prev => ({
-                ...prev,
+             const newFormData = {
+                ...formData,
                 skippedModules: {
-                   ...prev.skippedModules,
+                   ...formData.skippedModules,
                    [moduleKey]: willBeSkipped
                 }
-             }));
+             };
+             setFormData(newFormData);
+             
+             let newValidatedPages = validatedPages;
              if (pageId) {
                  // Otomatis menvalidasi halaman jika modul di skip. Jika tidak di-skip, minta validasi ulang.
-                 setValidatedPages(prev => ({ ...prev, [pageId]: willBeSkipped }));
+                 newValidatedPages = { ...validatedPages, [pageId]: willBeSkipped };
+                 setValidatedPages(newValidatedPages);
              }
+             
+             // Trigger auto-save secara background saat opsi skip diubah
+             handleSaveDraft(false, true, newValidatedPages, newFormData);
           };
 
           const handleSysTypeToggle = (type) => {
@@ -889,11 +1072,26 @@
           
           const handleUserRowChange = (index, field, value) => {
             const updatedUsers = [...formData.registeredUsers]; updatedUsers[index] = { ...updatedUsers[index], [field]: value };
-            if(field === 'roleCrm' && value === 'Tidak Pakai') updatedUsers[index].teamCrm = ''; 
             setFormData(prev => ({ ...prev, registeredUsers: updatedUsers }));
           };
           const handleAddUserRow = () => { setFormData(prev => ({ ...prev, registeredUsers: [...prev.registeredUsers, { firstName: '', lastName: '', email: '', phone: '', division: '', roleOmni: '', roleCrm: '', teamCrm: '' }] })); };
           const handleRemoveUserRow = (index) => { setFormData(prev => { const updatedUsers = [...prev.registeredUsers]; updatedUsers.splice(index, 1); return { ...prev, registeredUsers: updatedUsers }; }); };
+
+          const handleCrmUserRowChange = (index, field, value) => {
+            const updatedUsers = [...formData.crmUsers]; updatedUsers[index] = { ...updatedUsers[index], [field]: value };
+            setFormData(prev => ({ ...prev, crmUsers: updatedUsers }));
+          };
+          const handleAddCrmUserRow = () => { setFormData(prev => ({ ...prev, crmUsers: [...prev.crmUsers, { firstName: '', lastName: '', email: '', phone: '', division: '', roleCrm: '', teamCrm: '' }] })); };
+          const handleRemoveCrmUserRow = (index) => { setFormData(prev => { const updatedUsers = [...prev.crmUsers]; updatedUsers.splice(index, 1); return { ...prev, crmUsers: updatedUsers }; }); };
+          const handleSyncFromOmni = () => {
+             setFormData(prev => {
+                const validOmni = prev.registeredUsers.filter(u => u.firstName || u.email);
+                if (validOmni.length === 0) return prev;
+                const newCrm = validOmni.map(u => ({ ...u, roleCrm: '', teamCrm: '' }));
+                return { ...prev, crmUsers: newCrm };
+             });
+             showToast("✅ Berhasil menyalin pengguna dari Omnichannel!");
+          };
 
           const handleCallCenterUserChange = (index, field, value) => {
             const updated = [...formData.callCenterUsers]; updated[index] = { ...updated[index], [field]: value };
@@ -1037,6 +1235,7 @@
           const handleSimpleMatrixChange = (index, field, value) => { const updated = [...formData.crmSimpleMatrix]; updated[index] = { ...updated[index], [field]: value }; setFormData(prev => ({ ...prev, crmSimpleMatrix: updated })); };
           const handleAdvancedMatrixChange = (index, field, value) => { const updated = [...formData.crmAdvancedMatrix]; updated[index] = { ...updated[index], [field]: value }; setFormData(prev => ({ ...prev, crmAdvancedMatrix: updated })); };
           const handleChannelChange = (index, field, value) => { const updated = [...formData.channels]; updated[index] = { ...updated[index], [field]: value }; setFormData(prev => ({ ...prev, channels: updated })); };
+          const handleEcommerceChange = (index, field, value) => { const updated = [...formData.ecommerce]; updated[index] = { ...updated[index], [field]: value }; setFormData(prev => ({ ...prev, ecommerce: updated })); };
 
           const handleWaFlowScreenChange = (sIndex, field, value) => { 
               const updated = [...formData.waFlow]; 
@@ -1228,11 +1427,19 @@
           
           const addTimelineRow = () => { 
             setFormData(prev => {
-              const updated = [...prev.timeline, { id: Date.now().toString(), no: '', activity: '', pic: '', status: 'Open', duration: '1', start: new Date().toISOString().split('T')[0], end: new Date().toISOString().split('T')[0], comment: '', lvl: 0 }];
+              const phase = 1; // Default to phase 1 for now
+              const updated = [...prev.timeline, { id: Date.now().toString(), no: '', activity: '', pic: '', status: 'Open', duration: '1', start: new Date().toISOString().split('T')[0], end: new Date().toISOString().split('T')[0], comment: '', lvl: 0, phase: phase }];
               return { ...prev, timeline: recalculateTimelineNumbers(updated) };
             }); 
           };
           
+          const addTimelineRowPhase2 = () => { 
+            setFormData(prev => {
+              const updated = [...prev.timeline, { id: Date.now().toString(), no: '', activity: '', pic: '', status: 'Open', duration: '1', start: new Date().toISOString().split('T')[0], end: new Date().toISOString().split('T')[0], comment: '', lvl: 0, phase: 2 }];
+              return { ...prev, timeline: recalculateTimelineNumbers(updated) };
+            }); 
+          };
+
           const removeTimelineRow = (index) => { 
             setFormData(prev => { 
               const updated = [...prev.timeline]; 
@@ -1255,7 +1462,7 @@
               while (insertIndex < updated.length && updated[insertIndex].lvl > parent.lvl) {
                 insertIndex++;
               }
-              updated.splice(insertIndex, 0, { id: Date.now().toString(), no: '', activity: '', pic: '', status: 'Open', duration: '1', start: parent.start || new Date().toISOString().split('T')[0], end: parent.end || new Date().toISOString().split('T')[0], comment: '', lvl: parent.lvl + 1 });
+              updated.splice(insertIndex, 0, { id: Date.now().toString(), no: '', activity: '', pic: '', status: 'Open', duration: '1', start: parent.start || new Date().toISOString().split('T')[0], end: parent.end || new Date().toISOString().split('T')[0], comment: '', lvl: parent.lvl + 1, phase: parent.phase });
               return { ...prev, timeline: recalculateTimelineNumbers(updated) };
             });
           };
@@ -1266,10 +1473,11 @@
               const today = new Date().toISOString().split('T')[0];
               const end = calculateEndDate(today, '5') || today;
               let newRows = [];
+              const phase = categoryName === 'Phase 2' ? 2 : 1; // Or find the current phase context
               
-              const baseRow = (act, lvl, comment = '') => ({
+              const baseRow = (act, lvl, comment = '', p = phase) => ({
                  id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-                 no: '', activity: act, pic: 'Client', status: 'Open', duration: '5', start: today, end: end, comment: comment, lvl: lvl
+                 no: '', activity: act, pic: 'Client', status: 'Open', duration: '5', start: today, end: end, comment: comment, lvl: lvl, phase: p
               });
 
               if (categoryName === 'CRM') {
@@ -1287,14 +1495,28 @@
               } else if (categoryName === 'Call Centre') {
                  newRows.push({ ...baseRow('Call Centre', 1, ''), pic: '' });
                  ['Users', 'Master Roles', 'Call Recording', 'IVR', 'Wallboard'].forEach(act => newRows.push(baseRow(act, 2)));
+              } else if (categoryName === 'Phase 2') {
+                 const p2Row = (act, pic, dur, comment = '') => ({
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                    no: '', activity: act, pic: pic, status: 'Open', duration: dur, start: today, end: calculateEndDate(today, dur) || today, comment: comment, lvl: 0, phase: 2
+                 });
+                 newRows.push(p2Row('Requirement Gathering Phase II', '', '5'));
+                 newRows.push(p2Row('Requirement Sign Off Phase II', 'Qontak / Client', '1'));
+                 newRows.push(p2Row('Development Phase II', '', '15'));
+                 newRows.push(p2Row('Internal SIT and QA Phase II', 'Qontak', '1', 'Proceed to next item if no issue'));
+                 newRows.push(p2Row('Knowledge Transfer Phase II', 'Qontak / Client', '1'));
+                 newRows.push(p2Row('UAT Phase II', 'Client', '3', 'Proceed while training'));
+                 newRows.push(p2Row('BAST Sign-Off / Go Live Phase II', 'Qontak / Client', '1'));
               }
               
               let insertIndex = updated.length;
-              const reqGatheringIndex = updated.findIndex(item => item.activity.includes('Requirement Gathering') && item.lvl === 0);
-              
-              if (reqGatheringIndex !== -1) {
-                 insertIndex = reqGatheringIndex + 1;
-                 while(insertIndex < updated.length && updated[insertIndex].lvl > 0) { insertIndex++; }
+              if (categoryName !== 'Phase 2') {
+                  const reqGatheringIndex = updated.findIndex(item => item.activity.includes('Requirement Gathering') && item.lvl === 0 && item.phase === 1);
+                  
+                  if (reqGatheringIndex !== -1) {
+                     insertIndex = reqGatheringIndex + 1;
+                     while(insertIndex < updated.length && updated[insertIndex].lvl > 0 && updated[insertIndex].phase === 1) { insertIndex++; }
+                  }
               }
 
               updated.splice(insertIndex, 0, ...newRows);
@@ -1355,7 +1577,12 @@
           };
 
           const handleValidatePage = (pageId) => {
-             setValidatedPages(prev => ({ ...prev, [pageId]: true }));
+             const newValidatedPages = { ...validatedPages, [pageId]: true };
+             setValidatedPages(newValidatedPages);
+             
+             // Trigger auto-save secara background saat halaman ditandai selesai
+             handleSaveDraft(false, true, newValidatedPages);
+             
              const nextId = getNextPageId(pageId);
              if (nextId !== pageId) {
                  handlePageNavigation(nextId);
@@ -1384,7 +1611,11 @@
                                  </label>
                              )}
                              {isValidated ? (
-                                 <button onClick={() => setValidatedPages(prev => ({...prev, [pageId]: false}))} className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-4 py-1.5 rounded-lg text-[11px] uppercase tracking-wider font-bold border border-emerald-200 transition-colors shadow-sm">
+                                 <button onClick={() => {
+                                     const newValidated = { ...validatedPages, [pageId]: false };
+                                     setValidatedPages(newValidated);
+                                     handleSaveDraft(false, true, newValidated);
+                                 }} className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-4 py-1.5 rounded-lg text-[11px] uppercase tracking-wider font-bold border border-emerald-200 transition-colors shadow-sm">
                                      ✅ Selesai (Edit)
                                  </button>
                              ) : (
@@ -1468,9 +1699,9 @@
                               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                           </div>
                           <h3 className="text-lg font-bold text-gray-900 mb-2">Buka Kunci Form</h3>
-                          <p className="text-gray-600 mb-6 text-sm">Masukkan 6-digit PIN yang Anda dapatkan dari Tim Qontak untuk mengedit form ini.</p>
+                          <p className="text-gray-600 mb-4 text-sm">Masukkan 6-digit PIN yang Anda dapatkan dari Tim Qontak untuk mengedit form ini.</p>
                           
-                          <div className="flex justify-center gap-2 sm:gap-3 mb-6" onPaste={handlePinPaste}>
+                          <div className="flex justify-center gap-2 sm:gap-3 mb-4" onPaste={handlePinPaste}>
                               {[0, 1, 2, 3, 4, 5].map((index) => (
                                   <input
                                       key={index}
@@ -1486,9 +1717,14 @@
                               ))}
                           </div>
                           
+                          <div className="mb-6 text-left">
+                              <label className="block text-sm font-bold text-gray-700 mb-2">Alasan Buka Kunci / Revisi <span className="text-red-500">*</span></label>
+                              <textarea value={revisionReason} onChange={(e) => setRevisionReason(e.target.value)} rows="2" className="w-full border-2 border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200 transition-all text-gray-800" placeholder="Contoh: Ada perubahan flow chatbot dan penambahan 2 pengguna CRM..."></textarea>
+                          </div>
+                          
                           <div className="flex justify-end gap-3 w-full">
-                              <button onClick={() => { setShowUnlockModal(false); setPinInput(''); }} className="allow-click flex-1 px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-bold transition-colors">Batal</button>
-                              <button onClick={handleUnlockForm} disabled={pinInput.length !== 6} className="allow-click flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors shadow-md">Buka Kunci</button>
+                              <button onClick={() => { setShowUnlockModal(false); setPinInput(''); setRevisionReason(''); }} className="allow-click flex-1 px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-bold transition-colors">Batal</button>
+                              <button onClick={handleUnlockForm} disabled={pinInput.length !== 6 || revisionReason.trim().length === 0} className="allow-click flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors shadow-md">Buka Kunci</button>
                           </div>
                       </div>
                   </div>
@@ -1763,7 +1999,7 @@
                         
                         <div className="mb-8 bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
                           <label className="font-bold block mb-2 text-gray-800 text-lg">Nama Perusahaan / Company Name</label>
-                          <input type="text" name="clientName" value={formData.clientName} onChange={handleRootChange} className="w-full border-b-2 border-gray-300 outline-none py-2 bg-transparent focus:border-blue-600 transition-colors text-xl font-semibold px-2" placeholder="Masukkan Nama Perusahaan..."/>
+                          <input type="text" name="clientName" value={formData.clientName} onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value.toUpperCase() }))} className="w-full border-b-2 border-gray-300 outline-none py-2 bg-transparent focus:border-blue-600 transition-colors text-xl font-semibold px-2 uppercase" placeholder="MASUKKAN NAMA PERUSAHAAN..."/>
                         </div>
 
                         <div className="flex flex-col gap-6">
@@ -2011,6 +2247,51 @@
                 </div>
                 )}
 
+                {/* ================= PAGE 18 (REVISION HISTORY) ================= */}
+                {isPageActive(18) && (
+                <div className={`print-section ${exportType === 'main' ? 'pdf-page-break mb-10 block' : safeCurrentPage === 18 ? 'block' : 'hidden'}`}>
+                  <div className="animate-fade-in">
+                    {exportType === 'main' && <PrintHeader />}
+                    <PageActionBar pageId={18} />
+
+                    <div className={`mb-8 bg-white ${isExporting ? 'p-0 shadow-none border-none' : 'p-6 md:p-8 rounded-lg shadow-sm border border-gray-200'}`}>
+                      <h2 className="text-xl font-bold mb-4 uppercase text-gray-900">RIWAYAT REVISI DOKUMEN</h2>
+                      <p className="text-[13px] text-gray-700 mb-6">Halaman ini memuat daftar perubahan dan revisi yang telah dilakukan pada dokumen URD ini setelah tahap persetujuan awal.</p>
+                      
+                      {formData.revisionHistory && formData.revisionHistory.length > 0 ? (
+                          <div className={`${isExporting ? 'overflow-visible' : 'overflow-x-auto'}`}>
+                              <table className="w-full border-collapse border border-black text-[13px] text-left">
+                                  <thead className="bg-[#a4c2f4]">
+                                      <tr>
+                                          <th className="border border-black p-2 w-16 text-center font-bold">Versi</th>
+                                          <th className="border border-black p-2 w-48 text-center font-bold">Waktu Revisi</th>
+                                          <th className="border border-black p-2 text-center font-bold">Alasan Revisi (Klien)</th>
+                                          <th className="border border-black p-2 text-center font-bold">Perubahan Modul Terdeteksi Sistem</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      {formData.revisionHistory.map((rev, idx) => (
+                                          <tr key={rev.id} className="bg-white avoid-break-row">
+                                              <td className="border border-black p-2 text-center font-bold text-blue-800">R{idx + 1}</td>
+                                              <td className="border border-black p-2 text-center font-medium">{rev.date}</td>
+                                              <td className="border border-black p-2">{rev.reason}</td>
+                                              <td className="border border-black p-3 text-emerald-700 font-medium whitespace-pre-wrap leading-relaxed text-[12px]">{rev.autoTrack || 'Menunggu verifikasi akhir...'}</td>
+                                          </tr>
+                                      ))}
+                                  </tbody>
+                              </table>
+                          </div>
+                      ) : (
+                          <div className="bg-gray-50 border border-gray-200 text-center py-10 rounded-lg">
+                              <p className="text-gray-500 font-medium">Belum ada riwayat revisi pada dokumen ini.</p>
+                          </div>
+                      )}
+                    </div>
+                    <ValidationFooter pageId={18} />
+                  </div>
+                </div>
+                )}
+
                 {/* ================= PAGE 2 ================= */}
                 {}
                 {isPageActive(2) && (
@@ -2076,6 +2357,7 @@
                                       <div className="w-full text-[13px] text-left font-medium text-gray-900">{formData.generalInfo.industry}</div>
                                    ) : (
                                       <select value={formData.generalInfo.industry} onChange={(e) => handleNestedChange('generalInfo', 'industry', e.target.value)} className="w-full bg-gray-100 border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:border-blue-500 text-sm">
+                                         <option value="" disabled hidden>Pilih Industry...</option>
                                          {masterData.industries.map(ind => (<option key={ind} value={ind}>{ind}</option>))}
                                       </select>
                                    )}
@@ -2088,6 +2370,7 @@
                                       <div className="w-full text-[13px] text-left font-medium text-gray-900">{formData.generalInfo.industryType}</div>
                                    ) : (
                                       <select value={formData.generalInfo.industryType} onChange={(e) => handleNestedChange('generalInfo', 'industryType', e.target.value)} className="w-full bg-gray-100 border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:border-blue-500 text-sm">
+                                         <option value="" disabled hidden>Pilih Industry Type...</option>
                                          {masterData.industryTypes.map(type => (<option key={type} value={type}>{type}</option>))}
                                       </select>
                                    )}
@@ -2102,6 +2385,7 @@
                                       <div className="w-full text-[13px] text-left font-medium text-gray-900">{formData.generalInfo.project}</div>
                                    ) : (
                                       <select value={formData.generalInfo.project} onChange={(e) => handleNestedChange('generalInfo', 'project', e.target.value)} className="w-full bg-gray-100 border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:border-blue-500 text-sm">
+                                         <option value="" disabled hidden>Pilih Project...</option>
                                          {masterData.projects.map(proj => (<option key={proj} value={proj}>{proj}</option>))}
                                       </select>
                                    )}
@@ -2115,6 +2399,7 @@
                                       <div className="w-full text-[13px] text-left font-medium text-gray-900">{formData.generalInfo.package || '-'}</div>
                                    ) : (
                                       <select value={formData.generalInfo.package} onChange={(e) => handlePackageChange(e.target.value)} className="w-full bg-gray-100 border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:border-blue-500 text-sm">
+                                         <option value="" disabled hidden>Pilih Package...</option>
                                          {masterData.packages.map(pkg => (<option key={pkg.id || pkg.name} value={pkg.name}>{pkg.name}</option>))}
                                       </select>
                                    )}
@@ -2252,87 +2537,186 @@
                         <h3 className={`font-bold text-xl mb-2 text-blue-900 border-b-2 inline-block ${isExporting ? 'border-black text-black' : 'border-blue-900'}`}>Project Timeline</h3>
                         <p className="text-[13px] text-gray-700 mb-2">Tentukan estimasi waktu (timeline) untuk setiap tahapan implementasi proyek ini dari Kick-off hingga Go-Live.</p>
                         
-                        <div className={`${isExporting ? 'overflow-visible' : 'overflow-x-auto'} bg-white custom-scrollbar pb-4`}>
-                           <table className="w-full border-collapse border border-black text-[11px]">
-                              <thead>
-                                 <tr className="bg-[#a4c2f4] avoid-break-row">
-                                    <th className="border border-black p-1.5 font-bold text-center w-8">No.</th>
-                                    <th className="border border-black p-1.5 font-bold text-center">Activity</th>
-                                    <th className="border border-black p-1.5 font-bold text-center w-28">PIC</th>
-                                    <th className="border border-black p-1.5 font-bold text-center w-24">Status</th>
-                                    <th className="border border-black p-1.5 font-bold text-center w-12">Duration</th>
-                                    <th className="border border-black p-1.5 font-bold text-center w-24">Planned Start Date</th>
-                                    <th className="border border-black p-1.5 font-bold text-center w-24">Planned End Date</th>
-                                    <th className="border border-black p-1.5 font-bold text-center">Comments</th>
-                                    {!isExporting && <th className="border border-black p-1.5 w-10"></th>}
-                                 </tr>
-                              </thead>
-                              <tbody>
-                                 {formData.timeline && formData.timeline.map((item, index) => (
-                                    <tr key={item.id} className={`bg-white hover:bg-gray-50 transition-colors group avoid-break-row ${item.lvl === 0 ? 'bg-white' : ''}`}>
-                                       <td className="border border-black p-0"><input type="text" value={item.no} onChange={(e) => handleTimelineChange(index, 'no', e.target.value)} className={`w-full h-full min-h-[26px] text-center outline-none bg-transparent font-medium ${item.lvl === 0 ? 'font-bold' : ''}`} /></td>
-                                       <td className="border border-black p-0">
-                                          <input type="text" value={item.activity} onChange={(e) => handleTimelineChange(index, 'activity', e.target.value)} className={`w-full h-full min-h-[26px] px-2 outline-none bg-transparent ${item.lvl === 0 ? 'font-bold' : item.lvl === 1 ? 'font-bold pl-4' : 'pl-8 font-medium'}`} />
-                                       </td>
-                                       <td className="border border-black p-0"><input type="text" value={item.pic} onChange={(e) => handleTimelineChange(index, 'pic', e.target.value)} className={`w-full h-full min-h-[26px] px-2 outline-none bg-transparent ${item.lvl === 0 ? 'font-bold' : 'font-medium'}`} /></td>
-                                       <td className="border border-black p-0 relative">
-                                          <select value={item.status} onChange={(e) => handleTimelineChange(index, 'status', e.target.value)} className={`w-full h-full min-h-[26px] px-1 outline-none bg-transparent font-medium ${item.lvl === 0 ? 'font-bold' : ''} ${isExporting ? 'appearance-auto' : 'appearance-none'}`}>
-                                             <option value="Open">Open</option><option value="In Progress">In Progress</option><option value="Done">Done</option>
-                                          </select>
-                                          {!isExporting && <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-gray-500 text-[9px]">▼</div>}
-                                       </td>
-                                       <td className="border border-black p-0"><input type="number" min="1" value={item.duration} onChange={(e) => handleTimelineChange(index, 'duration', e.target.value)} className={`w-full h-full min-h-[26px] outline-none bg-transparent text-center ${item.lvl === 0 ? 'font-bold' : 'font-medium'}`} /></td>
-                                       
-                                       <td className="border border-black p-0">
-                                          {isExporting ? (
-                                            <div className={`w-full h-full min-h-[26px] px-1 text-center flex items-center justify-center ${item.lvl === 0 ? 'font-bold' : 'font-medium'}`}>
-                                               {formatDateForPrint(item.start)}
-                                            </div>
-                                          ) : (
-                                            <input type="date" value={item.start} onChange={(e) => handleTimelineChange(index, 'start', e.target.value)} className={`w-full h-full min-h-[26px] px-1 outline-none bg-transparent text-center cursor-pointer ${item.lvl === 0 ? 'font-bold' : 'font-medium'}`} />
-                                          )}
-                                       </td>
-                                       
-                                       <td className="border border-black p-0 bg-gray-50">
-                                          <div className={`w-full h-full min-h-[26px] px-1 text-center flex items-center justify-center text-gray-700 ${item.lvl === 0 ? 'font-bold' : 'font-medium'}`}>
-                                             {formatDateForPrint(item.end)}
-                                          </div>
-                                       </td>
-                                       
-                                       <td className="border border-black p-0">
-                                          <input type="text" value={item.comment} onChange={(e) => handleTimelineChange(index, 'comment', e.target.value)} className={`w-full h-full min-h-[26px] px-2 outline-none bg-transparent font-medium ${item.comment ? 'text-[10px]' : ''}`} />
-                                       </td>
-                                       {!isExporting && (
-                                          <td className="border border-black p-1 text-center whitespace-nowrap">
-                                             {item.lvl < 2 && <button onClick={() => addCategoryChildRow(index)} className="text-blue-500 font-bold px-1 opacity-0 group-hover:opacity-100 transition-opacity text-sm" title="Tambah Sub Aktivitas">+</button>}
-                                             <button onClick={() => removeTimelineRow(index)} className="text-red-500 font-bold px-1 opacity-0 group-hover:opacity-100 transition-opacity text-sm" title="Hapus Baris">×</button>
-                                          </td>
-                                       )}
-                                    </tr>
-                                 ))}
-                              </tbody>
-                           </table>
+                        {/* Timeline Table Phase 1 */}
+                        <div className="mb-4">
+                            <h4 className="font-bold text-lg mb-2 text-gray-800">Phase 1</h4>
+                            <div className={`${isExporting ? 'overflow-visible' : 'overflow-x-auto'} bg-white custom-scrollbar pb-4`}>
+                               <table className="w-full border-collapse border border-black text-[11px]">
+                                  <thead>
+                                     <tr className="bg-[#a4c2f4] avoid-break-row">
+                                        <th className="border border-black p-1.5 font-bold text-center w-8">No.</th>
+                                        <th className="border border-black p-1.5 font-bold text-center">Activity</th>
+                                        <th className="border border-black p-1.5 font-bold text-center w-28">PIC</th>
+                                        <th className="border border-black p-1.5 font-bold text-center w-24">Status</th>
+                                        <th className="border border-black p-1.5 font-bold text-center w-12">Duration</th>
+                                        <th className="border border-black p-1.5 font-bold text-center w-24">Planned Start Date<br/><span className="text-[9px] font-normal leading-tight">(DD/MM/YYYY)</span></th>
+                                        <th className="border border-black p-1.5 font-bold text-center w-24">Planned End Date<br/><span className="text-[9px] font-normal leading-tight">(DD/MM/YYYY)</span></th>
+                                        <th className="border border-black p-1.5 font-bold text-center">Comments</th>
+                                        {!isExporting && <th className="border border-black p-1.5 w-10"></th>}
+                                     </tr>
+                                  </thead>
+                                  <tbody>
+                                     {formData.timeline && formData.timeline.map((item, index) => {
+                                        if (item.phase === 2) return null; // Only show Phase 1
+                                        return (
+                                        <tr key={item.id} className={`bg-white hover:bg-gray-50 transition-colors group avoid-break-row ${item.lvl === 0 ? 'bg-white' : ''}`}>
+                                           <td className="border border-black p-0"><input type="text" value={item.no} onChange={(e) => handleTimelineChange(index, 'no', e.target.value)} className={`w-full h-full min-h-[26px] text-center outline-none bg-transparent font-medium ${item.lvl === 0 ? 'font-bold' : ''}`} /></td>
+                                           <td className="border border-black p-0">
+                                              <input type="text" value={item.activity} onChange={(e) => handleTimelineChange(index, 'activity', e.target.value)} className={`w-full h-full min-h-[26px] px-2 outline-none bg-transparent ${item.lvl === 0 ? 'font-bold' : item.lvl === 1 ? 'font-bold pl-4' : 'pl-8 font-medium'}`} />
+                                           </td>
+                                           <td className="border border-black p-0"><input type="text" value={item.pic} onChange={(e) => handleTimelineChange(index, 'pic', e.target.value)} className={`w-full h-full min-h-[26px] px-2 outline-none bg-transparent ${item.lvl === 0 ? 'font-bold' : 'font-medium'}`} /></td>
+                                           <td className="border border-black p-0 relative">
+                                              <select value={item.status} onChange={(e) => handleTimelineChange(index, 'status', e.target.value)} className={`w-full h-full min-h-[26px] px-1 outline-none bg-transparent font-medium ${item.lvl === 0 ? 'font-bold' : ''} ${isExporting ? 'appearance-auto' : 'appearance-none'}`}>
+                                                 <option value="Open">Open</option><option value="In Progress">In Progress</option><option value="Done">Done</option>
+                                              </select>
+                                              {!isExporting && <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-gray-500 text-[9px]">▼</div>}
+                                           </td>
+                                           <td className="border border-black p-0"><input type="number" min="1" value={item.duration} onChange={(e) => handleTimelineChange(index, 'duration', e.target.value)} className={`w-full h-full min-h-[26px] outline-none bg-transparent text-center ${item.lvl === 0 ? 'font-bold' : 'font-medium'}`} /></td>
+                                           
+                                           <td className="border border-black p-0">
+                                              {isExporting ? (
+                                                <div className={`w-full h-full min-h-[26px] px-1 text-center flex items-center justify-center ${item.lvl === 0 ? 'font-bold' : 'font-medium'}`}>
+                                                   {formatDateForPrint(item.start)}
+                                                </div>
+                                              ) : (
+                                                <div className="relative w-full h-full min-h-[26px]">
+                                                   <div className={`absolute inset-0 flex items-center justify-center pointer-events-none ${item.lvl === 0 ? 'font-bold' : 'font-medium'} bg-transparent z-10`}>
+                                                      {formatDateForPrint(item.start)}
+                                                   </div>
+                                                   <input type="date" value={item.start} onChange={(e) => handleTimelineChange(index, 'start', e.target.value)} className="w-full h-full absolute inset-0 opacity-0 cursor-pointer z-20" title="Pilih Tanggal" />
+                                                </div>
+                                              )}
+                                           </td>
+                                           
+                                           <td className="border border-black p-0 bg-gray-50">
+                                              <div className={`w-full h-full min-h-[26px] px-1 text-center flex items-center justify-center text-gray-700 ${item.lvl === 0 ? 'font-bold' : 'font-medium'}`}>
+                                                 {formatDateForPrint(item.end)}
+                                              </div>
+                                           </td>
+                                           
+                                           <td className="border border-black p-0">
+                                              <input type="text" value={item.comment} onChange={(e) => handleTimelineChange(index, 'comment', e.target.value)} className={`w-full h-full min-h-[26px] px-2 outline-none bg-transparent font-medium ${item.comment ? 'text-[10px]' : ''}`} />
+                                           </td>
+                                           {!isExporting && (
+                                              <td className="border border-black p-1 text-center whitespace-nowrap">
+                                                 {item.lvl < 2 && <button onClick={() => addCategoryChildRow(index)} className="text-blue-500 font-bold px-1 opacity-0 group-hover:opacity-100 transition-opacity text-sm" title="Tambah Sub Aktivitas">+</button>}
+                                                 <button onClick={() => removeTimelineRow(index)} className="text-red-500 font-bold px-1 opacity-0 group-hover:opacity-100 transition-opacity text-sm" title="Hapus Baris">×</button>
+                                              </td>
+                                           )}
+                                        </tr>
+                                     )})}
+                                  </tbody>
+                               </table>
+                            </div>
+                            
+                            {!isExporting && (
+                               <div className="mt-3 flex flex-wrap justify-start items-center gap-2">
+                                  <button onClick={addTimelineRow} className="text-xs font-bold text-blue-700 hover:text-blue-900 flex items-center gap-1 bg-blue-50 px-4 py-2 rounded border border-blue-200 transition-colors">+ Tambah Baris Kosong Phase 1</button>
+                                  <div className="relative group/template">
+                                     <div className="pb-2 pt-2">
+                                        <button className="text-xs font-bold text-emerald-700 flex items-center gap-1 bg-emerald-50 px-4 py-2 rounded border border-emerald-200 transition-colors cursor-default">
+                                           + Tambah Template Kategori ▼
+                                        </button>
+                                     </div>
+                                     <div className="pt-2 absolute bottom-full left-0 hidden group-hover/template:block z-50">
+                                       <div className="bg-white border border-gray-200 shadow-lg rounded py-1 min-w-[160px] mb-[-8px]">
+                                          <button onClick={() => addTemplateCategory('CRM')} className="block w-full text-left px-4 py-2 text-xs font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700">CRM</button>
+                                          <button onClick={() => addTemplateCategory('Omnichannel')} className="block w-full text-left px-4 py-2 text-xs font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700">Omnichannel</button>
+                                          <button onClick={() => addTemplateCategory('Chatbot')} className="block w-full text-left px-4 py-2 text-xs font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700">Chatbot</button>
+                                          <button onClick={() => addTemplateCategory('Call Centre')} className="block w-full text-left px-4 py-2 text-xs font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700">Call Centre</button>
+                                       </div>
+                                     </div>
+                                  </div>
+                                  
+                                  {/* Tombol pemicu Phase 2 jika belum ada */}
+                                  {(!formData.timeline || !formData.timeline.some(item => item.phase === 2)) && (
+                                      <button onClick={() => addTemplateCategory('Phase 2')} className="text-xs font-bold text-orange-600 hover:text-orange-800 flex items-center gap-1 bg-orange-50 hover:bg-orange-100 px-4 py-2 rounded border border-orange-200 transition-colors ml-auto shadow-sm">
+                                         + Buat Tabel Timeline Phase 2
+                                      </button>
+                                  )}
+                               </div>
+                            )}
                         </div>
-                        
-                        {!isExporting && (
-                           <div className="mt-3 flex flex-wrap justify-start items-center gap-2">
-                              <button onClick={addTimelineRow} className="text-xs font-bold text-blue-700 hover:text-blue-900 flex items-center gap-1 bg-blue-50 px-4 py-2 rounded border border-blue-200 transition-colors">+ Tambah Baris Kosong</button>
-                              <div className="relative group/template">
-                                 <div className="pb-2 pt-2">
-                                    <button className="text-xs font-bold text-emerald-700 flex items-center gap-1 bg-emerald-50 px-4 py-2 rounded border border-emerald-200 transition-colors cursor-default">
-                                       + Tambah Template Kategori ▼
-                                    </button>
-                                 </div>
-                                 <div className="pt-2 absolute bottom-full left-0 hidden group-hover/template:block z-50">
-                                   <div className="bg-white border border-gray-200 shadow-lg rounded py-1 min-w-[160px] mb-[-8px]">
-                                      <button onClick={() => addTemplateCategory('CRM')} className="block w-full text-left px-4 py-2 text-xs font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700">CRM</button>
-                                      <button onClick={() => addTemplateCategory('Omnichannel')} className="block w-full text-left px-4 py-2 text-xs font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700">Omnichannel</button>
-                                      <button onClick={() => addTemplateCategory('Chatbot')} className="block w-full text-left px-4 py-2 text-xs font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700">Chatbot</button>
-                                      <button onClick={() => addTemplateCategory('Call Centre')} className="block w-full text-left px-4 py-2 text-xs font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700">Call Centre</button>
+
+                        {/* Timeline Table Phase 2 (Conditionally Rendered) */}
+                        {formData.timeline && formData.timeline.some(item => item.phase === 2) && (
+                            <div className="mb-4 mt-8 border-t border-gray-200 pt-6">
+                                <h4 className="font-bold text-lg mb-2 text-gray-800">Phase 2</h4>
+                                <div className={`${isExporting ? 'overflow-visible' : 'overflow-x-auto'} bg-white custom-scrollbar pb-4`}>
+                                   <table className="w-full border-collapse border border-black text-[11px]">
+                                      <thead>
+                                         <tr className="bg-[#fce5cd] avoid-break-row">
+                                            <th className="border border-black p-1.5 font-bold text-center w-8">No.</th>
+                                            <th className="border border-black p-1.5 font-bold text-center">Activity</th>
+                                            <th className="border border-black p-1.5 font-bold text-center w-28">PIC</th>
+                                            <th className="border border-black p-1.5 font-bold text-center w-24">Status</th>
+                                            <th className="border border-black p-1.5 font-bold text-center w-12">Duration</th>
+                                            <th className="border border-black p-1.5 font-bold text-center w-24">Planned Start Date<br/><span className="text-[9px] font-normal leading-tight">(DD/MM/YYYY)</span></th>
+                                            <th className="border border-black p-1.5 font-bold text-center w-24">Planned End Date<br/><span className="text-[9px] font-normal leading-tight">(DD/MM/YYYY)</span></th>
+                                            <th className="border border-black p-1.5 font-bold text-center">Comments</th>
+                                            {!isExporting && <th className="border border-black p-1.5 w-10"></th>}
+                                         </tr>
+                                      </thead>
+                                      <tbody>
+                                         {formData.timeline.map((item, index) => {
+                                            if (item.phase !== 2) return null; // Only show Phase 2
+                                            return (
+                                            <tr key={item.id} className={`bg-white hover:bg-gray-50 transition-colors group avoid-break-row ${item.lvl === 0 ? 'bg-white' : ''}`}>
+                                               <td className="border border-black p-0"><input type="text" value={item.no} onChange={(e) => handleTimelineChange(index, 'no', e.target.value)} className={`w-full h-full min-h-[26px] text-center outline-none bg-transparent font-medium ${item.lvl === 0 ? 'font-bold' : ''}`} /></td>
+                                               <td className="border border-black p-0">
+                                                  <input type="text" value={item.activity} onChange={(e) => handleTimelineChange(index, 'activity', e.target.value)} className={`w-full h-full min-h-[26px] px-2 outline-none bg-transparent ${item.lvl === 0 ? 'font-bold' : item.lvl === 1 ? 'font-bold pl-4' : 'pl-8 font-medium'}`} />
+                                               </td>
+                                               <td className="border border-black p-0"><input type="text" value={item.pic} onChange={(e) => handleTimelineChange(index, 'pic', e.target.value)} className={`w-full h-full min-h-[26px] px-2 outline-none bg-transparent ${item.lvl === 0 ? 'font-bold' : 'font-medium'}`} /></td>
+                                               <td className="border border-black p-0 relative">
+                                                  <select value={item.status} onChange={(e) => handleTimelineChange(index, 'status', e.target.value)} className={`w-full h-full min-h-[26px] px-1 outline-none bg-transparent font-medium ${item.lvl === 0 ? 'font-bold' : ''} ${isExporting ? 'appearance-auto' : 'appearance-none'}`}>
+                                                     <option value="Open">Open</option><option value="In Progress">In Progress</option><option value="Done">Done</option>
+                                                  </select>
+                                                  {!isExporting && <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-gray-500 text-[9px]">▼</div>}
+                                               </td>
+                                               <td className="border border-black p-0"><input type="number" min="1" value={item.duration} onChange={(e) => handleTimelineChange(index, 'duration', e.target.value)} className={`w-full h-full min-h-[26px] outline-none bg-transparent text-center ${item.lvl === 0 ? 'font-bold' : 'font-medium'}`} /></td>
+                                               
+                                               <td className="border border-black p-0">
+                                                  {isExporting ? (
+                                                    <div className={`w-full h-full min-h-[26px] px-1 text-center flex items-center justify-center ${item.lvl === 0 ? 'font-bold' : 'font-medium'}`}>
+                                                       {formatDateForPrint(item.start)}
+                                                    </div>
+                                                  ) : (
+                                                    <div className="relative w-full h-full min-h-[26px]">
+                                                       <div className={`absolute inset-0 flex items-center justify-center pointer-events-none ${item.lvl === 0 ? 'font-bold' : 'font-medium'} bg-transparent z-10`}>
+                                                          {formatDateForPrint(item.start)}
+                                                       </div>
+                                                       <input type="date" value={item.start} onChange={(e) => handleTimelineChange(index, 'start', e.target.value)} className="w-full h-full absolute inset-0 opacity-0 cursor-pointer z-20" title="Pilih Tanggal" />
+                                                    </div>
+                                                  )}
+                                               </td>
+                                               
+                                               <td className="border border-black p-0 bg-gray-50">
+                                                  <div className={`w-full h-full min-h-[26px] px-1 text-center flex items-center justify-center text-gray-700 ${item.lvl === 0 ? 'font-bold' : 'font-medium'}`}>
+                                                     {formatDateForPrint(item.end)}
+                                                  </div>
+                                               </td>
+                                               
+                                               <td className="border border-black p-0">
+                                                  <input type="text" value={item.comment} onChange={(e) => handleTimelineChange(index, 'comment', e.target.value)} className={`w-full h-full min-h-[26px] px-2 outline-none bg-transparent font-medium ${item.comment ? 'text-[10px]' : ''}`} />
+                                               </td>
+                                               {!isExporting && (
+                                                  <td className="border border-black p-1 text-center whitespace-nowrap">
+                                                     {item.lvl < 2 && <button onClick={() => addCategoryChildRow(index)} className="text-blue-500 font-bold px-1 opacity-0 group-hover:opacity-100 transition-opacity text-sm" title="Tambah Sub Aktivitas">+</button>}
+                                                     <button onClick={() => removeTimelineRow(index)} className="text-red-500 font-bold px-1 opacity-0 group-hover:opacity-100 transition-opacity text-sm" title="Hapus Baris">×</button>
+                                                  </td>
+                                               )}
+                                            </tr>
+                                         )})}
+                                      </tbody>
+                                   </table>
+                                </div>
+                                
+                                {!isExporting && (
+                                   <div className="mt-3 flex flex-wrap justify-start items-center gap-2">
+                                      <button onClick={addTimelineRowPhase2} className="text-xs font-bold text-orange-700 hover:text-orange-900 flex items-center gap-1 bg-orange-50 px-4 py-2 rounded border border-orange-200 transition-colors">+ Tambah Baris Kosong Phase 2</button>
                                    </div>
-                                 </div>
-                              </div>
-                           </div>
+                                )}
+                            </div>
                         )}
                         
                         <div className="avoid-break mt-8 text-[13px] text-gray-800">
@@ -2469,52 +2853,51 @@
                                  <thead>
                                     <tr className="bg-[#a4c2f4] avoid-break-row">
                                        <th className="border border-black p-2 w-10 text-center font-bold">No.</th>
-                                       {!sysTypes.includes('Omnichannel') ? (
-                                         <Fragment><th className="border border-black p-2 font-bold text-center">Nama Depan</th><th className="border border-black p-2 font-bold text-center">Nama Belakang</th><th className="border border-black p-2 font-bold text-center w-64">Email</th></Fragment>
-                                       ) : (<th className="border border-black p-2 font-bold text-left">Nama Pengguna (Otomatis dari tabel atas)</th>)}
-                                       <th className="border border-black p-2 font-bold text-center w-48">Role (CRM)</th><th className="border border-black p-2 font-bold text-center w-48">Teams (CRM)</th>
+                                       <th className="border border-black p-2 font-bold text-center">Nama Depan</th>
+                                       <th className="border border-black p-2 font-bold text-center">Nama Belakang</th>
+                                       <th className="border border-black p-2 font-bold text-center w-64">Email</th>
+                                       <th className="border border-black p-2 font-bold text-center">Phone Number</th>
+                                       <th className="border border-black p-2 font-bold text-center w-36">Role (CRM)</th>
                                        <th className="border border-black p-2 font-bold text-center w-36">Division</th>
-                                       {!sysTypes.includes('Omnichannel') && !isExporting && <th className="border border-black p-2 w-12 text-center font-bold">Aksi</th>}
+                                       {!isExporting && <th className="border border-black p-2 w-12 text-center font-bold">Aksi</th>}
                                     </tr>
                                  </thead>
                                  <tbody>
-                                    {formData.registeredUsers.map((user, index) => {
-                                       const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+                                    {formData.crmUsers.map((user, index) => {
                                        const isCrmDisabled = user.roleCrm === 'Tidak Pakai';
                                        return (
                                        <tr key={`crm-${index}`} className="bg-white avoid-break-row">
                                           <td className={`border border-black text-center font-bold bg-gray-50 ${isExporting ? 'p-2' : 'p-1'}`}>{index + 1}</td>
-                                          {!sysTypes.includes('Omnichannel') ? (
-                                            <Fragment>
-                                                <td className={`border border-black ${isExporting ? 'p-2' : 'p-0'}`}>{isExporting ? user.firstName || '-' : <input type="text" value={user.firstName} onChange={(e) => handleUserRowChange(index, 'firstName', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent" placeholder="Nama..."/>}</td>
-                                                <td className={`border border-black ${isExporting ? 'p-2' : 'p-0'}`}>{isExporting ? user.lastName || '-' : <input type="text" value={user.lastName} onChange={(e) => handleUserRowChange(index, 'lastName', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent" placeholder="Belakang..."/>}</td>
-                                                <td className={`border border-black ${isExporting ? 'p-2 text-center' : 'p-0'}`}>{isExporting ? user.email || '-' : <input type="email" value={user.email} onChange={(e) => handleUserRowChange(index, 'email', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent text-center" placeholder="email@contoh.com"/>}</td>
-                                            </Fragment>
-                                          ) : (<td className="border border-black p-2 bg-gray-50 font-medium text-gray-700">{fullName || <span className="italic text-gray-400">Belum diisi...</span>}</td>)}
+                                          <td className={`border border-black ${isExporting ? 'p-2' : 'p-0'}`}>{isExporting ? user.firstName || '-' : <input type="text" value={user.firstName} onChange={(e) => handleCrmUserRowChange(index, 'firstName', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent" placeholder="Nama..."/>}</td>
+                                          <td className={`border border-black ${isExporting ? 'p-2' : 'p-0'}`}>{isExporting ? user.lastName || '-' : <input type="text" value={user.lastName} onChange={(e) => handleCrmUserRowChange(index, 'lastName', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent" placeholder="Belakang..."/>}</td>
+                                          <td className={`border border-black ${isExporting ? 'p-2 text-center' : 'p-0'}`}>{isExporting ? user.email || '-' : <input type="email" value={user.email} onChange={(e) => handleCrmUserRowChange(index, 'email', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent text-center" placeholder="email@contoh.com"/>}</td>
+                                          <td className={`border border-black ${isExporting ? 'p-2 text-center' : 'p-0'}`}>{isExporting ? user.phone || '-' : <input type="tel" value={user.phone} onChange={(e) => handleCrmUserRowChange(index, 'phone', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent text-center" placeholder="628..."/>}</td>
                                           <td className={`border border-black ${isExporting ? 'p-2 text-center font-medium' : 'p-0 relative'}`}>
                                              {isExporting ? (
                                                  user.roleCrm || '-'
                                              ) : (
-                                                 <select value={user.roleCrm || ''} onChange={(e) => handleUserRowChange(index, 'roleCrm', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent cursor-pointer text-center font-medium appearance-none"><option value="" disabled hidden>Pilih Role...</option><option value="Admin">Admin</option><option value="Manager">Manager</option><option value="SPV">SPV</option><option value="Agent">Agent</option><option value="Tidak Pakai">-- Tidak Pakai --</option></select>
+                                                 <select value={user.roleCrm || ''} onChange={(e) => handleCrmUserRowChange(index, 'roleCrm', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent cursor-pointer text-center font-medium appearance-none"><option value="" disabled hidden>Pilih Role...</option><option value="Admin">Admin</option><option value="Manager">Manager</option><option value="SPV">SPV</option><option value="Agent">Agent</option><option value="Tidak Pakai">-- Tidak Pakai --</option></select>
                                              )}
                                           </td>
                                           <td className={`border border-black ${isExporting ? 'p-2 text-center' : 'p-0'}`}>
-                                             {isExporting ? (
-                                                 <span className={isCrmDisabled ? 'text-gray-400 italic' : ''}>{isCrmDisabled ? '-' : (user.teamCrm || '-')}</span>
-                                             ) : (
-                                                 <input type="text" value={user.teamCrm || ''} onChange={(e) => handleUserRowChange(index, 'teamCrm', e.target.value)} disabled={isCrmDisabled} className={`w-full h-full min-h-[30px] p-2 outline-none bg-transparent text-center ${isCrmDisabled ? 'bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#f3f4f6_10px,#f3f4f6_20px)] cursor-not-allowed opacity-50' : ''}`} placeholder={isCrmDisabled ? "-" : "Misal: Sales..."}/>
-                                             )}
+                                            {isExporting ? user.division || '-' : <input type="text" value={user.division || ''} onChange={(e) => handleCrmUserRowChange(index, 'division', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent text-center" placeholder="Divisi..."/>}
                                           </td>
-                                          <td className={`border border-black ${isExporting ? 'p-2 text-center' : 'p-0'}`}>
-                                            {isExporting ? user.division || '-' : <input type="text" value={user.division || ''} onChange={(e) => handleUserRowChange(index, 'division', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent text-center" placeholder="Divisi..."/>}
-                                          </td>
-                                          {!sysTypes.includes('Omnichannel') && !isExporting && (<td className="border border-black p-1 text-center"><button onClick={() => handleRemoveUserRow(index)} className="text-red-500 font-bold hover:text-red-700 bg-red-50 px-2 py-1 rounded border border-red-200 transition-colors text-xs" title="Hapus Baris">X</button></td>)}
+                                          {!isExporting && (<td className="border border-black p-1 text-center"><button onClick={() => handleRemoveCrmUserRow(index)} className="text-red-500 font-bold hover:text-red-700 bg-red-50 px-2 py-1 rounded border border-red-200 transition-colors text-xs" title="Hapus Baris">X</button></td>)}
                                        </tr>
                                     )})}
                                  </tbody>
                               </table>
                            </div>
                            
+                           {!isExporting && (
+                               <div className="mt-2 mb-12 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                   <button onClick={handleAddCrmUserRow} className="text-sm font-bold text-emerald-600 hover:text-emerald-800 flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded border border-emerald-200 transition-colors">+ Tambah Pengguna Baru</button>
+                                   {sysTypes.includes('Omnichannel') && (
+                                       <button onClick={handleSyncFromOmni} className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded border border-blue-200 transition-colors shadow-sm" title="Salin semua data pengguna dari tabel Omnichannel di atas">Salin dari Omnichannel 📋</button>
+                                   )}
+                               </div>
+                           )}
+
                            <div className={`avoid-break mb-4 bg-white border border-gray-200 shadow-sm rounded-lg p-4 ${isExporting ? 'hidden' : 'inline-block'}`}>
                              <h4 className="font-bold text-center text-[13px] text-gray-800 mb-3 border-b border-gray-200 pb-2">Variables</h4>
                              <div className="flex flex-wrap gap-x-8 gap-y-2 text-[11px] text-gray-600 justify-center">
@@ -3152,6 +3535,69 @@
                          </div>
                        </div>
                        <ValidationFooter pageId={6} />
+                    </div>
+                  </div>
+                  );
+                })()}
+
+                {/* ================= PAGE 19 (E-COMMERCE) ================= */}
+                {isPageActive(19) && (() => {
+                  const isSkipped = formData.skippedModules?.ecommerce || false;
+                  return (
+                  <div className={`print-section ${exportType === 'main' ? (isSkipped ? 'hidden' : 'pdf-page-break mb-10 block') : (safeCurrentPage === 19 ? 'block' : 'hidden')}`}>
+                    <div className="animate-fade-in">
+                       {exportType === 'main' && <PrintHeader />}
+                       <PageActionBar pageId={19} moduleKey="ecommerce" />
+
+                       <div className={`mb-8 bg-white ${isExporting ? 'p-0 shadow-none border-none' : 'p-6 md:p-8 rounded-lg shadow-sm border border-gray-200'}`}>
+                         <div className={isSkipped ? 'opacity-40 pointer-events-none grayscale-[50%]' : ''}>
+                           
+                           <div className="avoid-break bg-gray-200 border border-emerald-500 p-4 mb-6 text-[13px] text-gray-800 flex flex-col">
+                             <h4 className="font-bold text-emerald-800 text-base mb-2">E-Commerce Integration</h4>
+                             <p className="mb-2">Tentukan platform marketplace/e-commerce yang ingin diintegrasikan dengan Qontak Omnichannel:</p>
+                             <div className="grid grid-cols-[10px_auto] gap-x-2 gap-y-1 ml-2">
+                                <div>•</div><div>Memungkinkan tim Anda membalas chat dari pelanggan di berbagai marketplace langsung dari satu dashboard Qontak.</div>
+                                <div>•</div><div><span className="font-bold text-red-600">Pastikan Anda memiliki akses ke Seller Center (Admin Utama) dari setiap marketplace yang ingin diintegrasikan.</span></div>
+                                <div>•</div><div><span className="italic text-gray-600">*Tokopedia & Shopee Free 2 Shops</span></div>
+                             </div>
+                           </div>
+                           
+                           <div className={`${isExporting ? 'overflow-visible' : 'overflow-x-auto'}`}>
+                             <table className="w-full border-collapse border border-black text-[13px] min-w-full">
+                               <thead>
+                                 <tr className="bg-[#a4c2f4] avoid-break-row">
+                                    <th colSpan="2" className="border border-black p-2 font-bold text-center">Marketplace</th>
+                                    <th className="border border-black p-2 font-bold text-center w-16">Desty</th>
+                                    <th className="border border-black p-2 font-bold text-center w-48">Remarks</th>
+                                    <th className="border border-black p-2 font-bold text-center w-64">Link Referensi</th>
+                                 </tr>
+                               </thead>
+                               <tbody>
+                                 {formData.ecommerce.map((eco, index) => (
+                                   <tr key={eco.id} className="bg-white avoid-break-row">
+                                     <td className={`border border-black p-2 w-48 ${eco.isRed ? 'bg-[#e06666]' : eco.isOrange ? 'bg-[#f6b26b]' : ''}`}>{eco.name}</td>
+                                     <td className={`border border-black p-2 text-center w-12 ${eco.isRed ? 'bg-[#e06666]' : ''}`}><input type="checkbox" checked={eco.use} onChange={(e) => handleEcommerceChange(index, 'use', e.target.checked)} className="w-4 h-4 cursor-pointer"/></td>
+                                     {eco.chatbotDisabled ? (
+                                        <td className="border border-black p-2 bg-gray-200"></td>
+                                     ) : (
+                                        <td className="border border-black p-2 text-center bg-white"><input type="checkbox" checked={eco.chatbot} onChange={(e) => handleEcommerceChange(index, 'chatbot', e.target.checked)} className="w-4 h-4 cursor-pointer"/></td>
+                                     )}
+                                     <td className="border border-black p-2 bg-gray-200 text-gray-700 text-[13px] whitespace-pre-wrap leading-tight">{eco.remarks}</td>
+                                     <td className="border border-black p-2 bg-[#ffff00]">
+                                        {eco.link ? (
+                                           <a href={eco.link} target="_blank" rel="noreferrer" className="text-blue-700 hover:underline text-[11.5px] break-all block leading-relaxed font-medium">{eco.link}</a>
+                                        ) : (
+                                           <span className="text-gray-400 italic text-[12px]">-</span>
+                                        )}
+                                     </td>
+                                   </tr>
+                                 ))}
+                               </tbody>
+                             </table>
+                           </div>
+                         </div>
+                       </div>
+                       <ValidationFooter pageId={19} />
                     </div>
                   </div>
                   );
