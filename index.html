@@ -453,6 +453,12 @@
             }
         };
 
+        // Fungsi baru untuk mengkapitalisasi huruf pertama setiap kata
+        const capitalizeWords = (str) => {
+            if (!str) return '';
+            return str.replace(/\b\w/g, char => char.toUpperCase());
+        };
+
         const PrintHeader = () => (
           <div className="flex justify-between items-end mb-6 pt-2 pb-3 border-b-2 border-gray-200 w-full">
             <div className="flex items-center gap-3">
@@ -506,7 +512,8 @@
             roles: ['Implementor Activation', 'Project Manager'],
             specialists: [{ id: '1', name: '', email: '', phone: '' }],
             supervisors: [{ name: 'Ismoyo Adi Nugroho', role: 'Enterprise Activation Supervisor' }], 
-            heads: [{ name: 'Vivi Wijaya', role: 'Head of Enterprise Activation' }] 
+            heads: [{ name: 'Vivi Wijaya', role: 'Head of Enterprise Activation' }],
+            customPages: []
           });
 
           const [formData, setFormData] = useState({
@@ -531,7 +538,8 @@
             callCenter: { ivr: defaultCallCenterIvr, config: defaultCallCenterConfig },
             skippedModules: { whatsapp: false, waFlow: false, channel: false, ecommerce: false, chatbot: false, pipeline: false, contact: false, company: false, deals: false, ticket: false, task: false, product: false, callCenter: false },
             ecommerce: defaultEcommerce,
-            revisionHistory: []
+            revisionHistory: [],
+            customPagesData: {}
           });
 
           useEffect(() => {
@@ -574,7 +582,8 @@
                             specialists: fetchedMasterData.specialists || prev.specialists,
                             industries: fetchedMasterData.industries || prev.industries,
                             projects: fetchedMasterData.projects || prev.projects,
-                            packages: fetchedMasterData.packages || prev.packages
+                            packages: fetchedMasterData.packages || prev.packages,
+                            customPages: fetchedMasterData.customPages || prev.customPages
                         }));
                     }
                 } catch (err) {
@@ -625,7 +634,8 @@
                      productCustoms: fetchedData.productCustoms || defaultProductCustoms,
                      callCenter: fetchedData.callCenter || { ivr: defaultCallCenterIvr, config: defaultCallCenterConfig },
                      skippedModules: fetchedData.skippedModules || prev.skippedModules,
-                     revisionHistory: fetchedData.revisionHistory || prev.revisionHistory
+                     revisionHistory: fetchedData.revisionHistory || prev.revisionHistory,
+                     customPagesData: fetchedData.customPagesData || prev.customPagesData
                   }));
                   if (fetchedData.validatedPages) {
                       setValidatedPages(fetchedData.validatedPages);
@@ -846,15 +856,10 @@
                       
                       // Cocokkan PIN yang diketik dengan PIN asli dari database
                       if (realPin && pinInput.trim() === realPin) {
-                          if (!revisionReason.trim()) {
-                              showToast("❌ Silakan isi alasan revisi terlebih dahulu.");
-                              return;
-                          }
-
                           const newRevision = {
                               id: Date.now().toString(),
                               date: new Date().toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' WIB',
-                              reason: revisionReason
+                              reason: "Revisi Form URD"
                           };
                           
                           const updatedHistory = [...(formData.revisionHistory || []), newRevision];
@@ -874,7 +879,7 @@
                           setShowUnlockModal(false);
                           setPinInput('');
                           setRevisionReason('');
-                          showToast("✅ Kunci form berhasil dibuka! Riwayat revisi telah dicatat.");
+                          showToast("✅ Kunci form berhasil dibuka! Sistem siap melacak perubahan Anda.");
                       } else {
                           showToast("❌ PIN yang Anda masukkan salah.");
                       }
@@ -956,7 +961,7 @@
              const hasTicket = isUnlocked('Ticket Management');
              const hasDeal = isUnlocked('Deal Management');
 
-             return pagesConfig.filter(page => {
+             const corePages = pagesConfig.filter(page => {
                  switch(page.id) {
                      case 7: return true; // Chatbot selalu dimunculkan
                      case 8: return hasDeal || hasTicket; // Pipeline (muncul jika Deal ATAU Ticket aktif)
@@ -974,6 +979,16 @@
                      default: return true; // Halaman inti, WA, & Call Center selalu muncul
                  }
              });
+             
+             // Sisipkan halaman custom yang statusnya Aktif
+             const activeCustomPages = (masterData.customPages || [])
+                 .filter(p => p.isActive)
+                 .map(p => ({ id: p.id, name: p.title, special: false, isCustom: true }));
+                 
+             const pagesBeforeSignOff = corePages.filter(p => p.id !== 16);
+             const signOffPage = corePages.find(p => p.id === 16);
+             
+             return [...pagesBeforeSignOff, ...activeCustomPages, signOffPage];
           };
 
           const dynamicPages = getDynamicPages();
@@ -992,6 +1007,16 @@
           };
           
           const handlePageNavigation = (targetPageId) => {
+             // Cek apakah menuju halaman 16 (Sign Off) tapi belum semua tervalidasi
+             if (targetPageId === 16) {
+                 const currentDynamic = getDynamicPages();
+                 const unval = currentDynamic.filter(p => p.id !== 16 && !validatedPages[p.id]);
+                 if (unval.length > 0) {
+                     showToast("⚠️ Halaman Sign Off terkunci! Harap Tandai Selesai semua halaman sebelumnya.");
+                     return;
+                 }
+             }
+
              setCurrentPage(targetPageId);
              
              setTimeout(() => {
@@ -1037,8 +1062,22 @@
              });
           };
 
-          const handleRootChange = (e) => { setFormData(prev => ({ ...prev, [e.target.name]: e.target.value })); };
-          const handleNestedChange = (section, field, value) => { setFormData(prev => ({...prev, [section]: { ...prev[section], [field]: value }})); };
+          // Modifikasi handleRootChange untuk kapitalisasi
+          const handleRootChange = (e) => { 
+             const name = e.target.name;
+             let value = e.target.value;
+             if (name === 'clientName') value = value.toUpperCase();
+             setFormData(prev => ({ ...prev, [name]: value })); 
+          };
+          
+          // Modifikasi handleNestedChange untuk kapitalisasi beberapa field spesifik
+          const handleNestedChange = (section, field, value) => { 
+             let finalValue = value;
+             if (section === 'teamStructure' && (field.includes('Name') || field.includes('Role'))) {
+                 finalValue = capitalizeWords(value);
+             }
+             setFormData(prev => ({...prev, [section]: { ...prev[section], [field]: finalValue }})); 
+          };
           
           const handlePackageChange = (selectedPackageName) => {
              setFormData(prev => {
@@ -1070,15 +1109,21 @@
           const handleSharedFbbmChange = (value) => { setFormData(prev => ({ ...prev, useCases: { ...prev.useCases, fbbmId: value }, whatsappDetails: { ...prev.whatsappDetails, fbbmId: value } })); };
           const handleFeatureChange = (index, field, value) => { const newFeatures = [...formData.features]; newFeatures[index] = { ...newFeatures[index], [field]: value }; setFormData(prev => ({ ...prev, features: newFeatures })); };
           
+          // Modifikasi user row change untuk kapitalisasi
           const handleUserRowChange = (index, field, value) => {
-            const updatedUsers = [...formData.registeredUsers]; updatedUsers[index] = { ...updatedUsers[index], [field]: value };
+            let finalValue = value;
+            if (['firstName', 'lastName', 'division'].includes(field)) finalValue = capitalizeWords(value);
+            const updatedUsers = [...formData.registeredUsers]; updatedUsers[index] = { ...updatedUsers[index], [field]: finalValue };
             setFormData(prev => ({ ...prev, registeredUsers: updatedUsers }));
           };
           const handleAddUserRow = () => { setFormData(prev => ({ ...prev, registeredUsers: [...prev.registeredUsers, { firstName: '', lastName: '', email: '', phone: '', division: '', roleOmni: '', roleCrm: '', teamCrm: '' }] })); };
           const handleRemoveUserRow = (index) => { setFormData(prev => { const updatedUsers = [...prev.registeredUsers]; updatedUsers.splice(index, 1); return { ...prev, registeredUsers: updatedUsers }; }); };
 
+          // Modifikasi crm user row change untuk kapitalisasi
           const handleCrmUserRowChange = (index, field, value) => {
-            const updatedUsers = [...formData.crmUsers]; updatedUsers[index] = { ...updatedUsers[index], [field]: value };
+            let finalValue = value;
+            if (['firstName', 'lastName', 'division'].includes(field)) finalValue = capitalizeWords(value);
+            const updatedUsers = [...formData.crmUsers]; updatedUsers[index] = { ...updatedUsers[index], [field]: finalValue };
             setFormData(prev => ({ ...prev, crmUsers: updatedUsers }));
           };
           const handleAddCrmUserRow = () => { setFormData(prev => ({ ...prev, crmUsers: [...prev.crmUsers, { firstName: '', lastName: '', email: '', phone: '', division: '', roleCrm: '', teamCrm: '' }] })); };
@@ -1093,8 +1138,11 @@
              showToast("✅ Berhasil menyalin pengguna dari Omnichannel!");
           };
 
+          // Modifikasi call center user change untuk kapitalisasi
           const handleCallCenterUserChange = (index, field, value) => {
-            const updated = [...formData.callCenterUsers]; updated[index] = { ...updated[index], [field]: value };
+            let finalValue = value;
+            if (['firstName', 'lastName', 'division'].includes(field)) finalValue = capitalizeWords(value);
+            const updated = [...formData.callCenterUsers]; updated[index] = { ...updated[index], [field]: finalValue };
             setFormData(prev => ({ ...prev, callCenterUsers: updated }));
           };
           const handleAddCallCenterUserRow = () => { setFormData(prev => ({ ...prev, callCenterUsers: [...prev.callCenterUsers, { firstName: '', lastName: '', email: '', phone: '', division: '', role: '' }] })); };
@@ -1412,10 +1460,13 @@
             );
           };
 
+          // Modifikasi timeline change untuk kapitalisasi
           const handleTimelineChange = (index, field, value) => {
             setFormData(prev => {
               const updated = [...prev.timeline];
-              updated[index] = { ...updated[index], [field]: value };
+              let finalValue = value;
+              if (['activity', 'pic'].includes(field)) finalValue = capitalizeWords(value);
+              updated[index] = { ...updated[index], [field]: finalValue };
               
               if (field === 'start' || field === 'duration') {
                  const newEnd = calculateEndDate(updated[index].start, updated[index].duration);
@@ -1440,124 +1491,52 @@
             }); 
           };
 
-          const removeTimelineRow = (index) => { 
-            setFormData(prev => { 
-              const updated = [...prev.timeline]; 
-              const targetLvl = updated[index].lvl;
-              let deleteCount = 1;
-              for (let i = index + 1; i < updated.length; i++) {
-                if (updated[i].lvl > targetLvl) deleteCount++;
-                else break;
-              }
-              updated.splice(index, deleteCount); 
-              return { ...prev, timeline: recalculateTimelineNumbers(updated) }; 
-            }); 
+          // Modifikasi pipeline & stage change untuk kapitalisasi
+          const handlePipelineChange = (pIndex, field, value) => { 
+             let finalValue = value;
+             if (field === 'name') finalValue = capitalizeWords(value);
+             const updated = [...formData.pipelines]; updated[pIndex] = { ...updated[pIndex], [field]: finalValue }; 
+             setFormData(prev => ({ ...prev, pipelines: updated })); 
           };
-
-          const addCategoryChildRow = (parentIndex) => {
-            setFormData(prev => {
-              const updated = [...prev.timeline];
-              const parent = updated[parentIndex];
-              let insertIndex = parentIndex + 1;
-              while (insertIndex < updated.length && updated[insertIndex].lvl > parent.lvl) {
-                insertIndex++;
-              }
-              updated.splice(insertIndex, 0, { id: Date.now().toString(), no: '', activity: '', pic: '', status: 'Open', duration: '1', start: parent.start || new Date().toISOString().split('T')[0], end: parent.end || new Date().toISOString().split('T')[0], comment: '', lvl: parent.lvl + 1, phase: parent.phase });
-              return { ...prev, timeline: recalculateTimelineNumbers(updated) };
-            });
+          const handleStageChange = (pIndex, sIndex, field, value) => { 
+             let finalValue = value;
+             if (field === 'name') finalValue = capitalizeWords(value);
+             const updated = [...formData.pipelines]; updated[pIndex].stages[sIndex] = { ...updated[pIndex].stages[sIndex], [field]: finalValue }; 
+             setFormData(prev => ({ ...prev, pipelines: updated })); 
           };
-
-          const addTemplateCategory = (categoryName) => {
-            setFormData(prev => {
-              const updated = [...prev.timeline];
-              const today = new Date().toISOString().split('T')[0];
-              const end = calculateEndDate(today, '5') || today;
-              let newRows = [];
-              const phase = categoryName === 'Phase 2' ? 2 : 1; // Or find the current phase context
-              
-              const baseRow = (act, lvl, comment = '', p = phase) => ({
-                 id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-                 no: '', activity: act, pic: 'Client', status: 'Open', duration: '5', start: today, end: end, comment: comment, lvl: lvl, phase: p
-              });
-
-              if (categoryName === 'CRM') {
-                 newRows.push({ ...baseRow('CRM', 1, ''), pic: '' });
-                 ['Users', 'Master Roles', 'Contacts', 'Companies', 'Deals Pipeline', 'Deals', 'Task', 'Products'].forEach(act => newRows.push(baseRow(act, 2)));
-              } else if (categoryName === 'Omnichannel') {
-                 newRows.push({ ...baseRow('Omnichannel', 1, ''), pic: '' });
-                 ['Users', 'Master Roles', 'WABA Information', 'FBBM Information'].forEach(act => newRows.push(baseRow(act, 2)));
-              } else if (categoryName === 'Chatbot') {
-                 newRows.push({ ...baseRow('Chatbot', 1, ''), pic: '' });
-                 newRows.push(baseRow('Users', 2, 'Same with Omnichannel'));
-                 newRows.push(baseRow('Master Roles', 2, 'Same with Omnichannel'));
-                 newRows.push(baseRow('FAQs', 2));
-                 newRows.push(baseRow('Flow', 2));
-              } else if (categoryName === 'Call Centre') {
-                 newRows.push({ ...baseRow('Call Centre', 1, ''), pic: '' });
-                 ['Users', 'Master Roles', 'Call Recording', 'IVR', 'Wallboard'].forEach(act => newRows.push(baseRow(act, 2)));
-              } else if (categoryName === 'Phase 2') {
-                 const p2Row = (act, pic, dur, comment = '') => ({
-                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-                    no: '', activity: act, pic: pic, status: 'Open', duration: dur, start: today, end: calculateEndDate(today, dur) || today, comment: comment, lvl: 0, phase: 2
-                 });
-                 newRows.push(p2Row('Requirement Gathering Phase II', '', '5'));
-                 newRows.push(p2Row('Requirement Sign Off Phase II', 'Qontak / Client', '1'));
-                 newRows.push(p2Row('Development Phase II', '', '15'));
-                 newRows.push(p2Row('Internal SIT and QA Phase II', 'Qontak', '1', 'Proceed to next item if no issue'));
-                 newRows.push(p2Row('Knowledge Transfer Phase II', 'Qontak / Client', '1'));
-                 newRows.push(p2Row('UAT Phase II', 'Client', '3', 'Proceed while training'));
-                 newRows.push(p2Row('BAST Sign-Off / Go Live Phase II', 'Qontak / Client', '1'));
-              }
-              
-              let insertIndex = updated.length;
-              if (categoryName !== 'Phase 2') {
-                  const reqGatheringIndex = updated.findIndex(item => item.activity.includes('Requirement Gathering') && item.lvl === 0 && item.phase === 1);
-                  
-                  if (reqGatheringIndex !== -1) {
-                     insertIndex = reqGatheringIndex + 1;
-                     while(insertIndex < updated.length && updated[insertIndex].lvl > 0 && updated[insertIndex].phase === 1) { insertIndex++; }
-                  }
-              }
-
-              updated.splice(insertIndex, 0, ...newRows);
-              return { ...prev, timeline: recalculateTimelineNumbers(updated) };
-            });
-          };
-
-          const handlePipelineChange = (pIndex, field, value) => { const updated = [...formData.pipelines]; updated[pIndex] = { ...updated[pIndex], [field]: value }; setFormData(prev => ({ ...prev, pipelines: updated })); };
-          const handleStageChange = (pIndex, sIndex, field, value) => { const updated = [...formData.pipelines]; updated[pIndex].stages[sIndex] = { ...updated[pIndex].stages[sIndex], [field]: value }; setFormData(prev => ({ ...prev, pipelines: updated })); };
           const addStage = (pIndex) => { const updated = [...formData.pipelines]; updated[pIndex].stages.push({ id: Date.now().toString(), name: '', rottingTime: '', remarks: '' }); setFormData(prev => ({ ...prev, pipelines: updated })); };
           const removeStage = (pIndex, sIndex) => { const updated = [...formData.pipelines]; updated[pIndex].stages.splice(sIndex, 1); setFormData(prev => ({ ...prev, pipelines: updated })); };
           const addPipeline = () => { setFormData(prev => ({ ...prev, pipelines: [...prev.pipelines, { id: Date.now().toString(), module: 'Deals', name: '', stages: [{ id: Date.now().toString()+'s', name: '', rottingTime: '', remarks: '' }] }] })); };
           const removePipeline = (pIndex) => { const updated = [...formData.pipelines]; updated.splice(pIndex, 1); setFormData(prev => ({ ...prev, pipelines: updated })); };
 
-          const handleContactDefaultChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.contactDefaults]; updated[index] = { ...updated[index], [field]: value }; return { ...prev, contactDefaults: updated }; }); };
-          const handleContactCustomChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.contactCustoms]; updated[index] = { ...updated[index], [field]: value }; return { ...prev, contactCustoms: updated }; }); };
+          // Modifikasi default/custom change untuk kapitalisasi
+          const handleContactDefaultChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.contactDefaults]; updated[index] = { ...updated[index], [field]: field === 'rename' ? capitalizeWords(value) : value }; return { ...prev, contactDefaults: updated }; }); };
+          const handleContactCustomChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.contactCustoms]; updated[index] = { ...updated[index], [field]: field === 'field' || field === 'rename' ? capitalizeWords(value) : value }; return { ...prev, contactCustoms: updated }; }); };
           const addContactCustomField = () => { setFormData(prev => ({ ...prev, contactCustoms: [...prev.contactCustoms, { id: Date.now().toString(), show: false, field: '', mandatory: false, rename: '', type: 'Single Line Text', options: '', remarks: '' }] })); };
           const removeContactCustomField = (index) => { setFormData(prev => { const updated = [...prev.contactCustoms]; updated.splice(index, 1); return { ...prev, contactCustoms: updated }; }); };
           
-          const handleCompanyDefaultChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.companyDefaults]; updated[index] = { ...updated[index], [field]: value }; return { ...prev, companyDefaults: updated }; }); };
-          const handleCompanyCustomChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.companyCustoms]; updated[index] = { ...updated[index], [field]: value }; return { ...prev, companyCustoms: updated }; }); };
+          const handleCompanyDefaultChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.companyDefaults]; updated[index] = { ...updated[index], [field]: field === 'rename' ? capitalizeWords(value) : value }; return { ...prev, companyDefaults: updated }; }); };
+          const handleCompanyCustomChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.companyCustoms]; updated[index] = { ...updated[index], [field]: field === 'field' || field === 'rename' ? capitalizeWords(value) : value }; return { ...prev, companyCustoms: updated }; }); };
           const addCompanyCustomField = () => { setFormData(prev => ({ ...prev, companyCustoms: [...prev.companyCustoms, { id: Date.now().toString(), show: false, field: '', mandatory: false, rename: '', type: 'Single Line Text', options: '', remarks: '' }] })); };
           const removeCompanyCustomField = (index) => { setFormData(prev => { const updated = [...prev.companyCustoms]; updated.splice(index, 1); return { ...prev, companyCustoms: updated }; }); };
 
-          const handleDealsDefaultChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.dealsDefaults]; updated[index] = { ...updated[index], [field]: value }; return { ...prev, dealsDefaults: updated }; }); };
-          const handleDealsCustomChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.dealsCustoms]; updated[index] = { ...updated[index], [field]: value }; return { ...prev, dealsCustoms: updated }; }); };
+          const handleDealsDefaultChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.dealsDefaults]; updated[index] = { ...updated[index], [field]: field === 'rename' ? capitalizeWords(value) : value }; return { ...prev, dealsDefaults: updated }; }); };
+          const handleDealsCustomChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.dealsCustoms]; updated[index] = { ...updated[index], [field]: field === 'field' || field === 'rename' ? capitalizeWords(value) : value }; return { ...prev, dealsCustoms: updated }; }); };
           const addDealsCustomField = () => { setFormData(prev => ({ ...prev, dealsCustoms: [...prev.dealsCustoms, { id: Date.now().toString(), show: false, field: '', mandatory: false, rename: '', type: 'Single Line Text', options: '', remarks: '' }] })); };
           const removeDealsCustomField = (index) => { setFormData(prev => { const updated = [...prev.dealsCustoms]; updated.splice(index, 1); return { ...prev, dealsCustoms: updated }; }); };
 
-          const handleTicketDefaultChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.ticketDefaults]; updated[index] = { ...updated[index], [field]: value }; return { ...prev, ticketDefaults: updated }; }); };
-          const handleTicketCustomChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.ticketCustoms]; updated[index] = { ...updated[index], [field]: value }; return { ...prev, ticketCustoms: updated }; }); };
+          const handleTicketDefaultChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.ticketDefaults]; updated[index] = { ...updated[index], [field]: field === 'rename' ? capitalizeWords(value) : value }; return { ...prev, ticketDefaults: updated }; }); };
+          const handleTicketCustomChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.ticketCustoms]; updated[index] = { ...updated[index], [field]: field === 'field' || field === 'rename' ? capitalizeWords(value) : value }; return { ...prev, ticketCustoms: updated }; }); };
           const addTicketCustomField = () => { setFormData(prev => ({ ...prev, ticketCustoms: [...prev.ticketCustoms, { id: Date.now().toString(), show: false, field: '', mandatory: false, rename: '', type: 'Single Line Text', options: '', remarks: '' }] })); };
           const removeTicketCustomField = (index) => { setFormData(prev => { const updated = [...prev.ticketCustoms]; updated.splice(index, 1); return { ...prev, ticketCustoms: updated }; }); };
 
-          const handleTaskDefaultChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.taskDefaults]; updated[index] = { ...updated[index], [field]: value }; return { ...prev, taskDefaults: updated }; }); };
-          const handleTaskCustomChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.taskCustoms]; updated[index] = { ...updated[index], [field]: value }; return { ...prev, taskCustoms: updated }; }); };
+          const handleTaskDefaultChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.taskDefaults]; updated[index] = { ...updated[index], [field]: field === 'rename' ? capitalizeWords(value) : value }; return { ...prev, taskDefaults: updated }; }); };
+          const handleTaskCustomChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.taskCustoms]; updated[index] = { ...updated[index], [field]: field === 'field' || field === 'rename' ? capitalizeWords(value) : value }; return { ...prev, taskCustoms: updated }; }); };
           const addTaskCustomField = () => { setFormData(prev => ({ ...prev, taskCustoms: [...prev.taskCustoms, { id: Date.now().toString(), show: false, field: '', mandatory: false, rename: '', type: 'Single Line Text', options: '', remarks: '' }] })); };
           const removeTaskCustomField = (index) => { setFormData(prev => { const updated = [...prev.taskCustoms]; updated.splice(index, 1); return { ...prev, taskCustoms: updated }; }); };
 
-          const handleProductDefaultChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.productDefaults]; updated[index] = { ...updated[index], [field]: value }; return { ...prev, productDefaults: updated }; }); };
-          const handleProductCustomChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.productCustoms]; updated[index] = { ...updated[index], [field]: value }; return { ...prev, productCustoms: updated }; }); };
+          const handleProductDefaultChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.productDefaults]; updated[index] = { ...updated[index], [field]: field === 'rename' ? capitalizeWords(value) : value }; return { ...prev, productDefaults: updated }; }); };
+          const handleProductCustomChange = (index, field, value) => { setFormData(prev => { const updated = [...prev.productCustoms]; updated[index] = { ...updated[index], [field]: field === 'field' || field === 'rename' ? capitalizeWords(value) : value }; return { ...prev, productCustoms: updated }; }); };
           const addProductCustomField = () => { setFormData(prev => ({ ...prev, productCustoms: [...prev.productCustoms, { id: Date.now().toString(), show: false, field: '', mandatory: false, rename: '', type: 'Single Line Text', options: '', remarks: '' }] })); };
           const removeProductCustomField = (index) => { setFormData(prev => { const updated = [...prev.productCustoms]; updated.splice(index, 1); return { ...prev, productCustoms: updated }; }); };
 
@@ -1576,7 +1555,34 @@
              }));
           };
 
+          const handleCustomPageDataChange = (pageId, fieldId, value) => {
+              setFormData(prev => ({
+                  ...prev,
+                  customPagesData: {
+                      ...prev.customPagesData,
+                      [pageId]: {
+                          ...(prev.customPagesData[pageId] || {}),
+                          [fieldId]: value
+                      }
+                  }
+              }));
+          };
+
           const handleValidatePage = (pageId) => {
+             // Cek validasi wajib isi (mandatory) khusus untuk Custom Page
+             const customPage = masterData.customPages?.find(p => p.id === pageId);
+             if (customPage) {
+                 const emptyMandatory = customPage.fields.filter(f => {
+                     if (!f.mandatory) return false;
+                     const val = formData.customPagesData?.[pageId]?.[f.id];
+                     return val === undefined || val === null || val === '' || (f.type === 'Checkbox' && val === false);
+                 });
+                 if (emptyMandatory.length > 0) {
+                     showToast(`⚠️ Harap isi pertanyaan wajib: "${emptyMandatory[0].label}"`);
+                     return;
+                 }
+             }
+
              const newValidatedPages = { ...validatedPages, [pageId]: true };
              setValidatedPages(newValidatedPages);
              
@@ -1585,7 +1591,17 @@
              
              const nextId = getNextPageId(pageId);
              if (nextId !== pageId) {
-                 handlePageNavigation(nextId);
+                 if (nextId === 16) {
+                     const currentDynamic = getDynamicPages();
+                     const unval = currentDynamic.filter(p => p.id !== 16 && !newValidatedPages[p.id]);
+                     if (unval.length === 0) {
+                         handlePageNavigation(nextId);
+                     } else {
+                         showToast(`Tersisa ${unval.length} halaman yang belum ditandai selesai.`);
+                     }
+                 } else {
+                     handlePageNavigation(nextId);
+                 }
              }
           };
 
@@ -1717,14 +1733,9 @@
                               ))}
                           </div>
                           
-                          <div className="mb-6 text-left">
-                              <label className="block text-sm font-bold text-gray-700 mb-2">Alasan Buka Kunci / Revisi <span className="text-red-500">*</span></label>
-                              <textarea value={revisionReason} onChange={(e) => setRevisionReason(e.target.value)} rows="2" className="w-full border-2 border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200 transition-all text-gray-800" placeholder="Contoh: Ada perubahan flow chatbot dan penambahan 2 pengguna CRM..."></textarea>
-                          </div>
-                          
-                          <div className="flex justify-end gap-3 w-full">
+                          <div className="flex justify-end gap-3 w-full mt-6">
                               <button onClick={() => { setShowUnlockModal(false); setPinInput(''); setRevisionReason(''); }} className="allow-click flex-1 px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-bold transition-colors">Batal</button>
-                              <button onClick={handleUnlockForm} disabled={pinInput.length !== 6 || revisionReason.trim().length === 0} className="allow-click flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors shadow-md">Buka Kunci</button>
+                              <button onClick={handleUnlockForm} disabled={pinInput.length !== 6} className="allow-click flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors shadow-md">Buka Kunci</button>
                           </div>
                       </div>
                   </div>
@@ -1806,14 +1817,26 @@
               {!isExporting && (
                  <div className="flex justify-center mb-8 relative">
                    <div id="nav-container" className="flex items-center gap-1 sm:gap-2 bg-white px-3 sm:px-6 py-3 rounded-full shadow-sm border border-gray-200 text-xs sm:text-[13px] overflow-x-auto max-w-[90vw] hide-scrollbar font-medium relative w-full md:w-auto scroll-smooth">
-                     {navItems.map((nav, index) => (
-                        <Fragment key={nav.id}>
-                           <button id={`nav-btn-${nav.id}`} onClick={() => handlePageNavigation(nav.id)} className={`px-2 sm:px-3 py-1.5 rounded-full transition-colors whitespace-nowrap ${safeCurrentPage === nav.id ? (nav.special ? 'bg-emerald-600 text-white font-bold shadow-md' : 'bg-blue-600 text-white font-bold shadow-md') : (nav.special ? 'text-gray-500 hover:text-emerald-600' : 'text-gray-500 hover:text-blue-600')}`}>
-                              {nav.displayId}. {nav.name} {validatedPages[nav.id] ? '✅' : ''}
-                           </button>
-                           {index < navItems.length - 1 && <div className="h-0.5 w-1 sm:w-2 bg-gray-300 rounded-full shrink-0"></div>}
-                        </Fragment>
-                     ))}
+                     {navItems.map((nav, index) => {
+                        const isSignOffLocked = nav.id === 16 && !allValidated;
+                        return (
+                           <Fragment key={nav.id}>
+                              <button 
+                                 id={`nav-btn-${nav.id}`} 
+                                 onClick={() => handlePageNavigation(nav.id)} 
+                                 disabled={isSignOffLocked}
+                                 className={`px-2 sm:px-3 py-1.5 rounded-full transition-colors whitespace-nowrap 
+                                     ${isSignOffLocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' : 
+                                       safeCurrentPage === nav.id ? (nav.special ? 'bg-emerald-600 text-white font-bold shadow-md' : 'bg-blue-600 text-white font-bold shadow-md') : 
+                                       (nav.special ? 'text-gray-500 hover:text-emerald-600' : 'text-gray-500 hover:text-blue-600')}`}
+                                 title={isSignOffLocked ? "Selesaikan semua halaman terlebih dahulu" : ""}
+                              >
+                                 {nav.displayId}. {nav.name} {isSignOffLocked ? '🔒' : validatedPages[nav.id] ? '✅' : ''}
+                              </button>
+                              {index < navItems.length - 1 && <div className="h-0.5 w-1 sm:w-2 bg-gray-300 rounded-full shrink-0"></div>}
+                           </Fragment>
+                        );
+                     })}
                    </div>
                  </div>
               )}
@@ -2156,6 +2179,79 @@
                 </div>
                 )}
 
+                {/* ================= CUSTOM PAGES RENDERER ================= */}
+                {masterData.customPages && masterData.customPages.map(customPage => {
+                    if (!customPage.isActive || !isPageActive(customPage.id)) return null;
+                    return (
+                        <div key={customPage.id} className={`print-section ${exportType === 'main' ? 'pdf-page-break mb-10 block' : safeCurrentPage === customPage.id ? 'block' : 'hidden'}`}>
+                            <div className="animate-fade-in">
+                                {exportType === 'main' && <PrintHeader />}
+                                <PageActionBar pageId={customPage.id} />
+
+                                <div className={`mb-8 bg-white ${isExporting ? 'p-0 shadow-none border-none' : 'p-6 md:p-8 rounded-lg shadow-sm border border-gray-200'}`}>
+                                    <h2 className="text-xl font-bold mb-6 text-gray-900 border-b-2 border-gray-900 inline-block pb-1">{customPage.title}</h2>
+                                    
+                                    <div className="flex flex-col gap-6">
+                                        {customPage.fields.length === 0 ? (
+                                            <p className="text-gray-500 italic text-sm">Halaman ini belum memiliki input pertanyaan. Harap atur melalui Dashboard Admin.</p>
+                                        ) : (
+                                            customPage.fields.map(field => {
+                                                const value = formData.customPagesData?.[customPage.id]?.[field.id] !== undefined 
+                                                    ? formData.customPagesData[customPage.id][field.id] 
+                                                    : (field.type === 'Checkbox' ? false : '');
+                                                    
+                                                return (
+                                                    <div key={field.id} className="flex flex-col gap-2 avoid-break">
+                                                        <label className="text-[13px] font-bold text-gray-800">
+                                                            {field.label} {field.mandatory && <span className="text-red-500 ml-1" title="Wajib Diisi">*</span>}
+                                                        </label>
+                                                        
+                                                        {isExporting ? (
+                                                            <div className="text-[13px] font-medium text-gray-900 pb-2 border-b border-gray-300 min-h-[28px]">
+                                                                {field.type === 'Checkbox' ? (value ? '✔ Ya / Setuju' : 'Tidak') : (value || '-')}
+                                                            </div>
+                                                        ) : (
+                                                            <Fragment>
+                                                                {field.type === 'Single Line Text' && (
+                                                                    <input type="text" value={value} onChange={(e) => handleCustomPageDataChange(customPage.id, field.id, e.target.value)} className="w-full border-b-2 border-gray-300 py-2 outline-none focus:border-blue-600 bg-transparent text-sm transition-colors px-1" placeholder="Ketik jawaban..." />
+                                                                )}
+                                                                {field.type === 'Paragraph (Text Area)' && (
+                                                                    <textarea rows="3" value={value} onChange={(e) => handleCustomPageDataChange(customPage.id, field.id, e.target.value)} className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:border-blue-600 bg-white text-sm transition-colors resize-y shadow-sm" placeholder="Ketik jawaban panjang..."></textarea>
+                                                                )}
+                                                                {field.type === 'Number' && (
+                                                                    <input type="number" value={value} onChange={(e) => handleCustomPageDataChange(customPage.id, field.id, e.target.value)} className="w-full border-b-2 border-gray-300 py-2 outline-none focus:border-blue-600 bg-transparent text-sm transition-colors px-1" placeholder="0" />
+                                                                )}
+                                                                {field.type === 'Date' && (
+                                                                    <input type="date" value={value} onChange={(e) => handleCustomPageDataChange(customPage.id, field.id, e.target.value)} className="w-full sm:w-max border-b-2 border-gray-300 py-2 outline-none focus:border-blue-600 bg-transparent text-sm transition-colors cursor-pointer px-1" />
+                                                                )}
+                                                                {field.type === 'Dropdown' && (
+                                                                    <select value={value} onChange={(e) => handleCustomPageDataChange(customPage.id, field.id, e.target.value)} className="w-full sm:w-max min-w-[250px] border-b-2 border-gray-300 py-2 outline-none focus:border-blue-600 bg-transparent text-sm transition-colors cursor-pointer px-1">
+                                                                        <option value="" disabled hidden>Pilih salah satu...</option>
+                                                                        {(field.options || '').split(',').map(opt => opt.trim()).filter(Boolean).map((opt, i) => (
+                                                                            <option key={i} value={opt}>{opt}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                )}
+                                                                {field.type === 'Checkbox' && (
+                                                                    <label className="flex items-center gap-3 cursor-pointer w-max mt-1 bg-gray-50 px-3 py-2 rounded border border-gray-200 hover:bg-gray-100 transition-colors">
+                                                                        <input type="checkbox" checked={!!value} onChange={(e) => handleCustomPageDataChange(customPage.id, field.id, e.target.checked)} className="w-5 h-5 accent-blue-600 cursor-pointer" />
+                                                                        <span className="text-sm font-bold text-gray-700">Ya / Centang</span>
+                                                                    </label>
+                                                                )}
+                                                            </Fragment>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+                                <ValidationFooter pageId={customPage.id} />
+                            </div>
+                        </div>
+                    );
+                })}
+
                 {/* ================= PAGE 16 (SIGN OFF) - DIPINDAHKAN KE SINI AGAR JADI HALAMAN 2 DI PDF ================= */}
                 {}
                 {isPageActive(16) && (
@@ -2265,8 +2361,7 @@
                                       <tr>
                                           <th className="border border-black p-2 w-16 text-center font-bold">Versi</th>
                                           <th className="border border-black p-2 w-48 text-center font-bold">Waktu Revisi</th>
-                                          <th className="border border-black p-2 text-center font-bold">Alasan Revisi (Klien)</th>
-                                          <th className="border border-black p-2 text-center font-bold">Perubahan Modul Terdeteksi Sistem</th>
+                                          <th className="border border-black p-2 text-center font-bold">Rincian Perubahan Modul (Sistem Otomatis)</th>
                                       </tr>
                                   </thead>
                                   <tbody>
@@ -2274,8 +2369,7 @@
                                           <tr key={rev.id} className="bg-white avoid-break-row">
                                               <td className="border border-black p-2 text-center font-bold text-blue-800">R{idx + 1}</td>
                                               <td className="border border-black p-2 text-center font-medium">{rev.date}</td>
-                                              <td className="border border-black p-2">{rev.reason}</td>
-                                              <td className="border border-black p-3 text-emerald-700 font-medium whitespace-pre-wrap leading-relaxed text-[12px]">{rev.autoTrack || 'Menunggu verifikasi akhir...'}</td>
+                                              <td className="border border-black p-3 text-emerald-700 font-medium whitespace-pre-wrap leading-relaxed text-[12px]">{rev.autoTrack || 'Menunggu proses verifikasi akhir...'}</td>
                                           </tr>
                                       ))}
                                   </tbody>
@@ -3498,7 +3592,7 @@
                                 <div>•</div><div>Channel adalah daftar saluran komunikasi yang dapat diintegrasikan ke dalam aplikasi Omnichannel Qontak, seperti WhatsApp, Instagram, Facebook Messenger, dll.</div>
                                 <div>•</div><div>Sangat disarankan untuk mengintegrasikan sebanyak mungkin channel yang digunakan oleh bisnis Anda, agar dapat memaksimalkan penggunaan Omnichannel.</div>
                                 <div>•</div><div><span className="font-bold text-red-600">Pastikan Anda memiliki akses ke akun resmi dari setiap channel yang ingin diintegrasikan.</span></div>
-                                <div>•</div><div><span className="italic text-gray-600">*Tokopedia & Shopee Free 2 Shops</span></div>
+                                <div>•</div><div><span className="italic text-gray-600">*E-Commerce Free Max 2 Shops</span></div>
                              </div>
                            </div>
                            
@@ -3929,6 +4023,7 @@
                                             <th className="border border-black p-1 w-32 text-center">Field Type</th>
                                             <th className="border border-black p-1 min-w-[200px] w-[25%] text-center">Dropdown Options</th>
                                             <th className="border border-black p-1 min-w-[200px] w-[25%] text-center">Remarks</th>
+                                            {!isExporting && <th className="border border-black p-1 w-10 text-center bg-gray-100">Act</th>}
                                          </tr>
                                       </thead>
                                       <tbody>
@@ -3963,58 +4058,81 @@
                                                   </td>
                                                )}
                                                <td className={`border border-black p-1 w-10 ${index === 0 ? 'border-l-black' : ''} ${isUsageLocked ? 'bg-gray-200' : ''}`}><input type="checkbox" checked={field.show} onChange={(e) => !isUsageLocked && handleDefaultChange(index, 'show', e.target.checked)} className={`w-4 h-4 ${isUsageLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`} disabled={isUsageLocked}/></td>
-                                               <td className="border border-black p-1 w-40 min-w-[160px] max-w-[160px] text-left px-2">{field.field}</td>
-                                               <td className={`border border-black p-1 w-24 ${isMandatoryLocked ? 'bg-gray-200' : ''}`}><input type="checkbox" checked={field.mandatory} onChange={(e) => !isMandatoryLocked && handleDefaultChange(index, 'mandatory', e.target.checked)} className={`w-4 h-4 ${isMandatoryLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`} disabled={isMandatoryLocked}/></td>
-                                               <td className="border border-black p-0 w-40 bg-gray-200"><input type="text" value={field.rename || ''} readOnly className="w-full h-full min-h-[26px] bg-transparent outline-none px-2 cursor-not-allowed"/></td>
+                                               <td className={`border border-black p-1 w-40 min-w-[160px] max-w-[160px] text-left px-2 ${!field.show ? 'text-gray-400' : ''}`}>{field.field}</td>
+                                               <td className={`border border-black p-1 w-24 ${isMandatoryLocked || !field.show ? 'bg-gray-100' : ''}`}><input type="checkbox" checked={field.mandatory} onChange={(e) => !isMandatoryLocked && handleDefaultChange(index, 'mandatory', e.target.checked)} className={`w-4 h-4 ${isMandatoryLocked || !field.show ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`} disabled={isMandatoryLocked || !field.show}/></td>
+                                               <td className={`border border-black p-0 w-40 ${!field.show ? 'bg-gray-100' : ''}`}><input type="text" value={field.rename || ''} onChange={(e) => handleDefaultChange(index, 'rename', e.target.value)} disabled={!field.show} className={`w-full h-full min-h-[26px] bg-transparent outline-none px-2 ${!field.show ? 'cursor-not-allowed text-gray-400' : ''}`}/></td>
                                                <td className="border border-black p-1 w-32 text-left px-2 text-gray-700 bg-gray-200">{field.type}</td>
-                                               <td className="border border-black p-0 min-w-[200px] w-[25%]"><input type="text" value={field.options || ''} onChange={(e) => handleDefaultChange(index, 'options', e.target.value)} className="w-full h-full min-h-[26px] bg-transparent outline-none px-2"/></td>
-                                               <td className="border border-black p-0 min-w-[200px] w-[25%]"><input type="text" value={field.remarks || ''} onChange={(e) => handleDefaultChange(index, 'remarks', e.target.value)} className="w-full h-full min-h-[26px] bg-transparent outline-none px-2 text-gray-600"/></td>
+                                               <td className={`border border-black p-0 min-w-[200px] w-[25%] relative ${!field.show ? 'bg-gray-100' : ''}`}>
+                                                  {field.type === 'Association' ? (
+                                                     isExporting ? (
+                                                        <div className="w-full h-full min-h-[26px] px-2 flex items-center text-left text-[11px] font-bold text-blue-800 leading-tight">
+                                                           {field.options ? `Menghubungkan Module ${moduleTitle} dengan Module ${field.options}` : '-'}
+                                                        </div>
+                                                     ) : (
+                                                        <Fragment>
+                                                           <select value={field.options || ''} onChange={(e) => handleDefaultChange(index, 'options', e.target.value)} disabled={!field.show} className={`w-full h-full min-h-[26px] outline-none px-2 transition-colors appearance-none text-[10.5px] ${!field.show ? 'cursor-not-allowed text-gray-400 bg-transparent font-medium' : 'bg-blue-50 hover:bg-blue-100 cursor-pointer font-bold text-blue-700'}`}>
+                                                              <option value="" disabled hidden>Pilih Modul Relasi...</option>
+                                                              {['Contact', 'Company', 'Deals', 'Ticket', 'Task', 'Product'].map(opt => (
+                                                                 <option key={opt} value={opt}>Menghubungkan Module {moduleTitle} dengan Module {opt}</option>
+                                                              ))}
+                                                           </select>
+                                                           {!isExporting && field.show && <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-blue-700 text-[9px]">▼</div>}
+                                                        </Fragment>
+                                                     )
+                                                  ) : (
+                                                     <input type="text" value={field.options || ''} onChange={(e) => handleDefaultChange(index, 'options', e.target.value)} disabled={!field.show} className={`w-full h-full min-h-[26px] bg-transparent outline-none px-2 ${!field.show ? 'cursor-not-allowed text-gray-400' : ''}`} placeholder={field.type === 'Dropdown' && field.show ? "Opsi 1, Opsi 2..." : ""}/>
+                                                  )}
+                                               </td>
+                                               <td className={`border border-black p-0 min-w-[200px] w-[25%] ${!field.show ? 'bg-gray-100' : ''}`}><input type="text" value={field.remarks || ''} onChange={(e) => handleDefaultChange(index, 'remarks', e.target.value)} disabled={!field.show} className={`w-full h-full min-h-[26px] bg-transparent outline-none px-2 ${!field.show ? 'cursor-not-allowed text-gray-400' : 'text-gray-600'}`}/></td>
+                                               {!isExporting && <td className="border border-black p-1 w-10 bg-gray-100"></td>}
                                             </tr>
                                          )})}
                                          <tr>
                                             <td className="border-t-0 border-r-0 border-b-0 border-l-0 p-0 m-0"></td>
-                                            <td colSpan={7} className="border border-black p-1 text-left px-2 italic text-red-500 font-bold bg-[#f4cccc] text-[11px]">Jika ada penambahan field, mohon diisi dibawah ini</td>
+                                            <td colSpan={isExporting ? 7 : 8} className="border border-black p-1 text-left px-2 italic text-red-500 font-bold bg-[#f4cccc] text-[11px] border-l-black">Jika ada penambahan field, mohon diisi dibawah ini</td>
                                          </tr>
-                                      </tbody>
-                                   </table>
-                                </div>
-
-                                <div className={`${isExporting ? 'overflow-visible' : 'overflow-x-auto'} mb-3`}>
-                                   <table className="w-full border-collapse border border-black text-[12px] min-w-full text-center border-t-0">
-                                      <thead className="hidden">
-                                         <tr className="bg-[#a4c2f4] avoid-break-row">
-                                            <th className="w-10">Usage</th>
-                                            <th className="w-40 min-w-[160px] max-w-[160px]">Fields</th>
-                                            <th className="w-24">Mandatory?</th>
-                                            <th className="w-40">Rename</th>
-                                            <th className="w-32">Field Type</th>
-                                            <th className="min-w-[200px] w-[25%]">Dropdown Options</th>
-                                            <th className="min-w-[200px] w-[25%]">Remarks</th>
-                                            {!isExporting && <th className="w-10">Act</th>}
-                                         </tr>
-                                      </thead>
-                                      <tbody>
                                          {customsArray.map((field, index) => (
                                             <tr key={field.id} className="bg-white hover:bg-gray-50 avoid-break-row">
-                                               <td className="border border-black p-1 w-10"><input type="checkbox" checked={field.show} onChange={(e) => handleCustomChange(index, 'show', e.target.checked)} className="w-4 h-4 cursor-pointer"/></td>
-                                               <td className="border border-black p-0 w-40 min-w-[160px] max-w-[160px]"><input type="text" value={field.field} onChange={(e) => handleCustomChange(index, 'field', e.target.value)} className="w-full h-full min-h-[26px] outline-none px-2 bg-transparent"/></td>
-                                               <td className="border border-black p-1 w-24"><input type="checkbox" checked={field.mandatory} onChange={(e) => handleCustomChange(index, 'mandatory', e.target.checked)} className="w-4 h-4 cursor-pointer"/></td>
-                                               <td className="border border-black p-0 w-40"><input type="text" value={field.rename} onChange={(e) => handleCustomChange(index, 'rename', e.target.value)} className="w-full h-full min-h-[26px] outline-none px-2 bg-transparent"/></td>
-                                               <td className="border border-black p-0 w-32 relative">
-                                                  <select value={field.type} onChange={(e) => handleCustomChange(index, 'type', e.target.value)} className={`w-full h-full min-h-[26px] outline-none px-1 bg-transparent cursor-pointer ${isExporting ? 'appearance-auto' : 'appearance-none'}`}>
-                                                     <option value="Single Line Text">Single Line Text</option><option value="Number">Number</option><option value="Dropdown">Dropdown</option><option value="Date">Date</option><option value="User">User</option><option value="Team">Team</option>
+                                               <td className="border-t-0 border-l-0 border-b-0 p-0 m-0 bg-transparent"></td>
+                                               <td className="border border-black p-1 w-10 border-l-black"><input type="checkbox" checked={field.show} onChange={(e) => handleCustomChange(index, 'show', e.target.checked)} className="w-4 h-4 cursor-pointer"/></td>
+                                               <td className={`border border-black p-0 w-40 min-w-[160px] max-w-[160px] ${!field.show ? 'bg-gray-100' : ''}`}><input type="text" value={field.field} onChange={(e) => handleCustomChange(index, 'field', e.target.value)} disabled={!field.show} className={`w-full h-full min-h-[26px] outline-none px-2 bg-transparent ${!field.show ? 'cursor-not-allowed text-gray-400' : ''}`}/></td>
+                                               <td className={`border border-black p-1 w-24 ${!field.show ? 'bg-gray-100' : ''}`}><input type="checkbox" checked={field.mandatory} onChange={(e) => handleCustomChange(index, 'mandatory', e.target.checked)} disabled={!field.show} className={`w-4 h-4 ${!field.show ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}/></td>
+                                               <td className={`border border-black p-0 w-40 ${!field.show ? 'bg-gray-100' : ''}`}><input type="text" value={field.rename} onChange={(e) => handleCustomChange(index, 'rename', e.target.value)} disabled={!field.show} className={`w-full h-full min-h-[26px] outline-none px-2 bg-transparent ${!field.show ? 'cursor-not-allowed text-gray-400' : ''}`}/></td>
+                                               <td className={`border border-black p-0 w-32 relative ${!field.show ? 'bg-gray-100' : ''}`}>
+                                                  <select value={field.type} onChange={(e) => handleCustomChange(index, 'type', e.target.value)} disabled={!field.show} className={`w-full h-full min-h-[26px] outline-none px-1 bg-transparent ${!field.show ? 'cursor-not-allowed text-gray-400' : 'cursor-pointer'} ${isExporting ? 'appearance-auto' : 'appearance-none'}`}>
+                                                     <option value="Single Line Text">Single Line Text</option><option value="Number">Number</option><option value="Dropdown">Dropdown</option><option value="Date">Date</option><option value="User">User</option><option value="Team">Team</option><option value="Association">Association</option>
                                                   </select>
-                                                  {!isExporting && <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-gray-500 text-[9px]">▼</div>}
+                                                  {!isExporting && field.show && <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-gray-500 text-[9px]">▼</div>}
                                                </td>
-                                               <td className="border border-black p-0 min-w-[200px] w-[25%]"><input type="text" value={field.options} onChange={(e) => handleCustomChange(index, 'options', e.target.value)} className="w-full h-full min-h-[26px] outline-none px-2 bg-transparent"/></td>
-                                               <td className="border border-black p-0 min-w-[200px] w-[25%]"><input type="text" value={field.remarks} onChange={(e) => handleCustomChange(index, 'remarks', e.target.value)} className="w-full h-full min-h-[26px] outline-none px-2 bg-transparent text-gray-700"/></td>
-                                               {!isExporting && <td className="border border-black p-1 w-10"><button onClick={() => removeCustomField(index)} className="text-red-500 font-bold px-1 hover:text-red-700 text-[14px]">×</button></td>}
+                                               <td className={`border border-black p-0 min-w-[200px] w-[25%] relative ${!field.show ? 'bg-gray-100' : ''}`}>
+                                                  {field.type === 'Association' ? (
+                                                     isExporting ? (
+                                                        <div className="w-full h-full min-h-[26px] px-2 flex items-center text-left text-[11px] font-bold text-blue-800 leading-tight">
+                                                           {field.options ? `Menghubungkan Module ${moduleTitle} dengan Module ${field.options}` : '-'}
+                                                        </div>
+                                                     ) : (
+                                                        <Fragment>
+                                                           <select value={field.options || ''} onChange={(e) => handleCustomChange(index, 'options', e.target.value)} disabled={!field.show} className={`w-full h-full min-h-[26px] outline-none px-2 transition-colors appearance-none text-[10.5px] ${!field.show ? 'cursor-not-allowed text-gray-400 bg-transparent font-medium' : 'bg-blue-50 hover:bg-blue-100 cursor-pointer font-bold text-blue-700'}`}>
+                                                              <option value="" disabled hidden>Pilih Modul Relasi...</option>
+                                                              {['Contact', 'Company', 'Deals', 'Ticket', 'Task', 'Product'].map(opt => (
+                                                                 <option key={opt} value={opt}>Menghubungkan Module {moduleTitle} dengan Module {opt}</option>
+                                                              ))}
+                                                           </select>
+                                                           {!isExporting && field.show && <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-blue-700 text-[9px]">▼</div>}
+                                                        </Fragment>
+                                                     )
+                                                  ) : (
+                                                     <input type="text" value={field.options} onChange={(e) => handleCustomChange(index, 'options', e.target.value)} disabled={!field.show} className={`w-full h-full min-h-[26px] outline-none px-2 bg-transparent ${!field.show ? 'cursor-not-allowed text-gray-400' : ''}`} placeholder={field.type === 'Dropdown' && field.show ? "Opsi 1, Opsi 2..." : ""}/>
+                                                  )}
+                                               </td>
+                                               <td className={`border border-black p-0 min-w-[200px] w-[25%] ${!field.show ? 'bg-gray-100' : ''}`}><input type="text" value={field.remarks} onChange={(e) => handleCustomChange(index, 'remarks', e.target.value)} disabled={!field.show} className={`w-full h-full min-h-[26px] outline-none px-2 bg-transparent ${!field.show ? 'cursor-not-allowed text-gray-400' : 'text-gray-700'}`}/></td>
+                                               {!isExporting && <td className="border border-black p-1 w-10 text-center"><button onClick={() => removeCustomField(index)} className="text-red-500 font-bold px-1 hover:text-red-700 text-[14px]">×</button></td>}
                                             </tr>
                                          ))}
                                       </tbody>
                                    </table>
                                 </div>
-                                {!isExporting && <div className="ml-6"><button onClick={addCustomField} className="text-[12px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded border border-blue-200 transition-colors">+ Tambah Field Custom</button></div>}
+                                {!isExporting && <div className="ml-6 mt-3"><button onClick={addCustomField} className="text-[12px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded border border-blue-200 transition-colors">+ Tambah Field Custom</button></div>}
                                 
                              </div>
                           </div>
