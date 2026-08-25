@@ -712,6 +712,10 @@
                   isFinalVerified: finalStatus 
               };
 
+              // MENCEGAH BUG "ZOMBIE PIN": 
+              // Selalu hapus unlockPin dari paket data klien yang akan disave agar Auto-Save tidak menghidupkan kembali PIN yang sudah hangus.
+              delete dataToSave.unlockPin;
+
               // AUTO-TRACK LOGIC: Jika final verifikasi dilakukan, bandingkan dengan snapshot lama
               if (forceFinalVerify) {
                   const docSnap = await docRef.get();
@@ -873,7 +877,11 @@
                               revisionHistory: updatedHistory
                           });
                           
-                          setFormData(prev => ({ ...prev, revisionHistory: updatedHistory }));
+                          setFormData(prev => {
+                              const newData = { ...prev, revisionHistory: updatedHistory };
+                              delete newData.unlockPin; // Hapus juga dari state memori lokal
+                              return newData;
+                          });
                           setIsFinalVerified(false);
                           setUnlockPinFromDb(null);
                           setShowUnlockModal(false);
