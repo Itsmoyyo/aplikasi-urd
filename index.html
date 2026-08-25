@@ -489,6 +489,7 @@
           const [formId, setFormId] = useState('');
           const [autoSaveStatus, setAutoSaveStatus] = useState('');
           const [validatedPages, setValidatedPages] = useState({});
+          const [pageErrors, setPageErrors] = useState({});
           const [isFinalVerified, setIsFinalVerified] = useState(false);
           const [showFinalModal, setShowFinalModal] = useState(false);
           const [activeChatbotIndex, setActiveChatbotIndex] = useState(0);
@@ -1000,6 +1001,78 @@
              return [...pagesBeforeSignOff, ...activeCustomPages, signOffPage];
           };
 
+          // Fungsi validasi mandatory untuk Halaman 1 (Team Structure)
+          const validateTeamStructure = () => {
+              const { clientName, teamStructure } = formData;
+              const missingFields = [];
+
+              if (!clientName) missingFields.push("Nama Perusahaan (Company Name)");
+              if (!teamStructure.clientCLevelName) missingFields.push("Nama C-Level");
+              if (!teamStructure.clientCLevelEmail) missingFields.push("Email C-Level");
+              if (!teamStructure.clientCLevelPhone) missingFields.push("No. Telp C-Level");
+              if (!teamStructure.clientMHLevelName) missingFields.push("Nama M/H-Level");
+              if (!teamStructure.clientMHLevelEmail) missingFields.push("Email M/H-Level");
+              if (!teamStructure.clientMHLevelPhone) missingFields.push("No. Telp M/H-Level");
+              if (!teamStructure.qontakImplementorRole) missingFields.push("Peran Qontak Implementor");
+              if (!teamStructure.qontakImplementorName) missingFields.push("Nama Qontak Implementor");
+              if (!teamStructure.clientPICName) missingFields.push("Nama PIC Klien");
+              if (!teamStructure.clientPICEmail) missingFields.push("Email PIC Klien");
+              if (!teamStructure.clientPICPhone) missingFields.push("No. Telp PIC Klien");
+
+              return missingFields;
+          };
+
+          // Fungsi validasi mandatory untuk Halaman 2 (Features)
+          const validateFeaturesPage = () => {
+              const missingFields = [];
+              const { generalInfo, useCases } = formData;
+              
+              if (!generalInfo.industry) missingFields.push("Industry");
+              if (!generalInfo.industryType) missingFields.push("Industry Type");
+              if (!generalInfo.project) missingFields.push("Project");
+              if (!generalInfo.package) missingFields.push("Package");
+              
+              if (useCases.marketing && (!useCases.marketingDetails || !useCases.marketingDetails.trim())) missingFields.push("Detail Marketing & Campaign");
+              if (useCases.sales && (!useCases.salesDetails || !useCases.salesDetails.trim())) missingFields.push("Detail Sales");
+              if (useCases.customerService && (!useCases.customerServiceDetails || !useCases.customerServiceDetails.trim())) missingFields.push("Detail Customer Service");
+              if (useCases.notification && (!useCases.notificationDetails || !useCases.notificationDetails.trim())) missingFields.push("Detail Notification Service");
+              if (useCases.others && (!useCases.othersSpecify || !useCases.othersSpecify.trim())) missingFields.push("Detail Others");
+              
+              return missingFields;
+          };
+
+          // Fungsi validasi mandatory untuk Halaman 4 (Users)
+          const validateUsersPage = () => {
+              const missingFields = [];
+              const sysTypes = Array.isArray(formData.systemUsageType) ? formData.systemUsageType : [];
+
+              if (sysTypes.includes('Omnichannel')) {
+                  formData.registeredUsers.forEach((user, index) => {
+                      if (!user.firstName || !user.lastName || !user.email || !user.phone || !user.roleOmni) {
+                          missingFields.push(`Omnichannel User Baris ${index + 1}`);
+                      }
+                  });
+              }
+
+              if (sysTypes.includes('CRM')) {
+                  formData.crmUsers.forEach((user, index) => {
+                      if (!user.firstName || !user.lastName || !user.email || !user.phone || !user.roleCrm) {
+                          missingFields.push(`CRM User Baris ${index + 1}`);
+                      }
+                  });
+              }
+
+              if (sysTypes.includes('Call Center')) {
+                  formData.callCenterUsers.forEach((user, index) => {
+                      if (!user.firstName || !user.lastName || !user.email || !user.phone || !user.role) {
+                          missingFields.push(`Call Center User Baris ${index + 1}`);
+                      }
+                  });
+              }
+
+              return missingFields;
+          };
+
           const dynamicPages = getDynamicPages();
           const navItems = dynamicPages.map((p, idx) => ({ ...p, displayId: idx + 1 }));
           const currentIndex = navItems.findIndex(p => p.id === currentPage);
@@ -1083,7 +1156,10 @@
           const handleNestedChange = (section, field, value) => { 
              let finalValue = value;
              if (section === 'teamStructure' && (field.includes('Name') || field.includes('Role'))) {
-                 finalValue = capitalizeWords(value);
+                 // JANGAN kapitalisasi field yang berasal dari dropdown (Role & Nama Implementor)
+                 if (field !== 'qontakImplementorRole' && field !== 'qontakImplementorName') {
+                     finalValue = capitalizeWords(value);
+                 }
              }
              setFormData(prev => ({...prev, [section]: { ...prev[section], [field]: finalValue }})); 
           };
@@ -1500,6 +1576,76 @@
             }); 
           };
 
+          const removeTimelineRow = (index) => {
+            setFormData(prev => {
+               const updated = [...prev.timeline];
+               updated.splice(index, 1);
+               return { ...prev, timeline: recalculateTimelineNumbers(updated) };
+            });
+          };
+
+          const addCategoryChildRow = (parentIndex) => {
+             setFormData(prev => {
+                const updated = [...prev.timeline];
+                const parent = updated[parentIndex];
+                if (parent.lvl >= 2) return prev; // Max depth of 2 levels
+
+                const newRow = {
+                   id: Date.now().toString(),
+                   no: '',
+                   activity: 'Sub Aktivitas Baru',
+                   pic: parent.pic || '',
+                   status: 'Open',
+                   duration: parent.duration || '1',
+                   start: parent.start,
+                   end: parent.end,
+                   comment: '',
+                   lvl: parent.lvl + 1,
+                   phase: parent.phase
+                };
+
+                // Insert the new row right below its parent and any existing siblings
+                let insertIndex = parentIndex + 1;
+                while (insertIndex < updated.length && updated[insertIndex].lvl > parent.lvl) {
+                    insertIndex++;
+                }
+
+                updated.splice(insertIndex, 0, newRow);
+                return { ...prev, timeline: recalculateTimelineNumbers(updated) };
+             });
+          };
+
+          const addTemplateCategory = (templateName) => {
+              setFormData(prev => {
+                  const updated = [...prev.timeline];
+                  const today = new Date().toISOString().split('T')[0];
+                  
+                  if (templateName === 'Phase 2') {
+                      updated.push({ id: Date.now().toString() + '_p2', no: '', activity: 'Aktivitas Phase 2', pic: '', status: 'Open', duration: '1', start: today, end: today, comment: '', lvl: 0, phase: 2 });
+                  } else {
+                      const baseId = Date.now().toString();
+                      updated.push({ id: baseId, no: '', activity: templateName, pic: '', status: 'Open', duration: '5', start: today, end: today, comment: '', lvl: 0, phase: 1 });
+                      
+                      const defaultSubActivities = {
+                          'CRM': ['Users', 'Master Roles', 'Contacts', 'Companies', 'Deals Pipeline', 'Deals', 'Task', 'Products'],
+                          'Omnichannel': ['Users', 'Master Roles', 'WABA Information', 'FBBM Information'],
+                          'Chatbot': ['Users', 'Master Roles', 'FAQs', 'Flow'],
+                          'Call Centre': ['Users', 'Master Roles', 'Call Recording', 'IVR', 'Wallboard']
+                      };
+
+                      const subActs = defaultSubActivities[templateName] || ['Sub Aktivitas 1', 'Sub Aktivitas 2'];
+                      
+                      subActs.forEach((act, idx) => {
+                          updated.push({
+                              id: `${baseId}_${idx}`, no: '', activity: act, pic: 'Client', status: 'Open', duration: '5', start: today, end: today, comment: '', lvl: 1, phase: 1
+                          });
+                      });
+                  }
+                  
+                  return { ...prev, timeline: recalculateTimelineNumbers(updated) };
+              });
+          };
+
           // Modifikasi pipeline & stage change untuk kapitalisasi
           const handlePipelineChange = (pIndex, field, value) => { 
              let finalValue = value;
@@ -1578,6 +1724,46 @@
           };
 
           const handleValidatePage = (pageId) => {
+             // Validasi Mandatory khusus Halaman 1 (Team)
+             if (pageId === 1) {
+                 const missingFields = validateTeamStructure();
+                 if (missingFields.length > 0) {
+                     setPageErrors(prev => ({ ...prev, 1: true }));
+                     // Ambil maksimal 3 field pertama untuk ditampilkan di toast agar tidak terlalu panjang
+                     const displayFields = missingFields.slice(0, 3).join(', ') + (missingFields.length > 3 ? ', dll.' : '');
+                     showToast(`⚠️ Halaman Team belum lengkap! Harap isi: ${displayFields}`);
+                     return; // Hentikan proses validasi
+                 } else {
+                     setPageErrors(prev => ({ ...prev, 1: false }));
+                 }
+             }
+
+             // Validasi Mandatory khusus Halaman 2 (Features)
+             if (pageId === 2) {
+                 const missingFields = validateFeaturesPage();
+                 if (missingFields.length > 0) {
+                     setPageErrors(prev => ({ ...prev, 2: true }));
+                     const displayFields = missingFields.slice(0, 3).join(', ') + (missingFields.length > 3 ? ', dll.' : '');
+                     showToast(`⚠️ Halaman Features belum lengkap! Harap isi: ${displayFields}`);
+                     return; 
+                 } else {
+                     setPageErrors(prev => ({ ...prev, 2: false }));
+                 }
+             }
+
+             // Validasi Mandatory khusus Halaman 4 (Users)
+             if (pageId === 4) {
+                 const missingFields = validateUsersPage();
+                 if (missingFields.length > 0) {
+                     setPageErrors(prev => ({ ...prev, 4: true }));
+                     const displayFields = missingFields.slice(0, 3).join(', ') + (missingFields.length > 3 ? '' : '');
+                     showToast(`⚠️ Data pengguna di ${displayFields} belum lengkap (Kecuali Divisi).`);
+                     return; 
+                 } else {
+                     setPageErrors(prev => ({ ...prev, 4: false }));
+                 }
+             }
+
              // Cek validasi wajib isi (mandatory) khusus untuk Custom Page
              const customPage = masterData.customPages?.find(p => p.id === pageId);
              if (customPage) {
@@ -2031,7 +2217,7 @@
                         
                         <div className="mb-8 bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
                           <label className="font-bold block mb-2 text-gray-800 text-lg">Nama Perusahaan / Company Name</label>
-                          <input type="text" name="clientName" value={formData.clientName} onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value.toUpperCase() }))} className="w-full border-b-2 border-gray-300 outline-none py-2 bg-transparent focus:border-blue-600 transition-colors text-xl font-semibold px-2 uppercase" placeholder="MASUKKAN NAMA PERUSAHAAN..."/>
+                          <input type="text" name="clientName" value={formData.clientName} onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value.toUpperCase() }))} className={`w-full border-b-2 outline-none py-2 focus:border-blue-600 transition-colors text-xl font-semibold px-2 uppercase ${pageErrors[1] && !formData.clientName ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-transparent'}`} placeholder="MASUKKAN NAMA PERUSAHAAN..."/>
                         </div>
 
                         <div className="flex flex-col gap-6">
@@ -2049,15 +2235,15 @@
                               <div className="flex flex-col gap-6">
                                 <div className="flex flex-col gap-2">
                                   <label className="text-[14px] font-bold text-gray-900">Nama</label>
-                                  <input type="text" value={formData.teamStructure.clientCLevelName} onChange={(e) => handleNestedChange('teamStructure', 'clientCLevelName', e.target.value)} className="w-full outline-none border-b-2 border-gray-200 pb-2 text-[15px] bg-transparent focus:border-blue-600 transition-colors px-1" placeholder="Nama PIC Klien"/>
+                                  <input type="text" value={formData.teamStructure.clientCLevelName} onChange={(e) => handleNestedChange('teamStructure', 'clientCLevelName', e.target.value)} className={`w-full outline-none border-b-2 pb-2 text-[15px] focus:border-blue-600 transition-colors px-1 ${pageErrors[1] && !formData.teamStructure.clientCLevelName ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-transparent'}`} placeholder="Nama C-Level"/>
                                 </div>
                                 <div className="flex flex-col gap-2">
                                   <label className="text-[14px] font-bold text-gray-900">Email</label>
-                                  <input type="email" value={formData.teamStructure.clientCLevelEmail} onChange={(e) => handleNestedChange('teamStructure', 'clientCLevelEmail', e.target.value)} className="w-full outline-none border-b-2 border-gray-200 pb-2 text-[15px] bg-transparent focus:border-blue-600 transition-colors px-1" placeholder="Email PIC Klien"/>
+                                  <input type="email" value={formData.teamStructure.clientCLevelEmail} onChange={(e) => handleNestedChange('teamStructure', 'clientCLevelEmail', e.target.value)} className={`w-full outline-none border-b-2 pb-2 text-[15px] focus:border-blue-600 transition-colors px-1 ${pageErrors[1] && !formData.teamStructure.clientCLevelEmail ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-transparent'}`} placeholder="Email C-Level"/>
                                 </div>
                                 <div className="flex flex-col gap-2">
                                   <label className="text-[14px] font-bold text-gray-900">No. Telp</label>
-                                  <input type="tel" value={formData.teamStructure.clientCLevelPhone} onChange={(e) => handleNestedChange('teamStructure', 'clientCLevelPhone', e.target.value)} className="w-full outline-none border-b-2 border-gray-200 pb-2 text-[15px] bg-transparent focus:border-blue-600 transition-colors px-1" placeholder="No. Telp PIC Klien"/>
+                                  <input type="tel" value={formData.teamStructure.clientCLevelPhone} onChange={(e) => handleNestedChange('teamStructure', 'clientCLevelPhone', e.target.value)} className={`w-full outline-none border-b-2 pb-2 text-[15px] focus:border-blue-600 transition-colors px-1 ${pageErrors[1] && !formData.teamStructure.clientCLevelPhone ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-transparent'}`} placeholder="No. Telp C-Level"/>
                                 </div>
                               </div>
                             </div>
@@ -2078,15 +2264,15 @@
                               <div className="flex flex-col gap-6">
                                 <div className="flex flex-col gap-2">
                                   <label className="text-[14px] font-bold text-gray-900">Nama</label>
-                                  <input type="text" value={formData.teamStructure.clientMHLevelName} onChange={(e) => handleNestedChange('teamStructure', 'clientMHLevelName', e.target.value)} className="w-full outline-none border-b-2 border-gray-200 pb-2 text-[15px] bg-transparent focus:border-blue-600 transition-colors px-1" placeholder="Nama PIC Klien"/>
+                                  <input type="text" value={formData.teamStructure.clientMHLevelName} onChange={(e) => handleNestedChange('teamStructure', 'clientMHLevelName', e.target.value)} className={`w-full outline-none border-b-2 pb-2 text-[15px] focus:border-blue-600 transition-colors px-1 ${pageErrors[1] && !formData.teamStructure.clientMHLevelName ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-transparent'}`} placeholder="Nama M/H-Level"/>
                                 </div>
                                 <div className="flex flex-col gap-2">
                                   <label className="text-[14px] font-bold text-gray-900">Email</label>
-                                  <input type="email" value={formData.teamStructure.clientMHLevelEmail} onChange={(e) => handleNestedChange('teamStructure', 'clientMHLevelEmail', e.target.value)} className="w-full outline-none border-b-2 border-gray-200 pb-2 text-[15px] bg-transparent focus:border-blue-600 transition-colors px-1" placeholder="Email PIC Klien"/>
+                                  <input type="email" value={formData.teamStructure.clientMHLevelEmail} onChange={(e) => handleNestedChange('teamStructure', 'clientMHLevelEmail', e.target.value)} className={`w-full outline-none border-b-2 pb-2 text-[15px] focus:border-blue-600 transition-colors px-1 ${pageErrors[1] && !formData.teamStructure.clientMHLevelEmail ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-transparent'}`} placeholder="Email M/H-Level"/>
                                 </div>
                                 <div className="flex flex-col gap-2">
                                   <label className="text-[14px] font-bold text-gray-900">No. Telp</label>
-                                  <input type="tel" value={formData.teamStructure.clientMHLevelPhone} onChange={(e) => handleNestedChange('teamStructure', 'clientMHLevelPhone', e.target.value)} className="w-full outline-none border-b-2 border-gray-200 pb-2 text-[15px] bg-transparent focus:border-blue-600 transition-colors px-1" placeholder="No. Telp PIC Klien"/>
+                                  <input type="tel" value={formData.teamStructure.clientMHLevelPhone} onChange={(e) => handleNestedChange('teamStructure', 'clientMHLevelPhone', e.target.value)} className={`w-full outline-none border-b-2 pb-2 text-[15px] focus:border-blue-600 transition-colors px-1 ${pageErrors[1] && !formData.teamStructure.clientMHLevelPhone ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-transparent'}`} placeholder="No. Telp M/H-Level"/>
                                 </div>
                               </div>
                             </div>
@@ -2111,7 +2297,8 @@
                                 <div className="flex flex-col gap-6">
                                   <div className="flex flex-col gap-2">
                                     <label className="text-[14px] font-bold text-gray-900">Peran</label>
-                                    <select value={formData.teamStructure.qontakImplementorRole} onChange={(e) => handleNestedChange('teamStructure', 'qontakImplementorRole', e.target.value)} className="w-full outline-none border-b-2 border-gray-200 pb-2 text-[15px] bg-transparent focus:border-blue-600 transition-colors cursor-pointer text-gray-900 font-medium px-1">
+                                    <select value={formData.teamStructure.qontakImplementorRole} onChange={(e) => handleNestedChange('teamStructure', 'qontakImplementorRole', e.target.value)} className={`w-full outline-none border-b-2 pb-2 text-[15px] focus:border-blue-600 transition-colors cursor-pointer text-gray-900 font-medium px-1 ${pageErrors[1] && !formData.teamStructure.qontakImplementorRole ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-transparent'}`}>
+                                      <option value="" disabled hidden>Pilih Peran...</option>
                                       {masterData.roles.map(role => (<option key={role} value={role}>{role}</option>))}
                                     </select>
                                   </div>
@@ -2126,7 +2313,8 @@
                                             handleNestedChange('teamStructure', 'qontakImplementorPhone', implementor.phone || '');
                                         }
                                       }}
-                                      className="w-full outline-none border-b-2 border-gray-200 pb-2 text-[15px] bg-transparent focus:border-blue-600 transition-colors cursor-pointer text-gray-900 font-medium px-1">
+                                      className={`w-full outline-none border-b-2 pb-2 text-[15px] focus:border-blue-600 transition-colors cursor-pointer text-gray-900 font-medium px-1 ${pageErrors[1] && !formData.teamStructure.qontakImplementorName ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-transparent'}`}>
+                                      <option value="" disabled hidden>Pilih Nama...</option>
                                       {masterData.specialists.map(imp => (<option key={imp.id || imp.name} value={imp.name}>{imp.name}</option>))}
                                     </select>
                                   </div>
@@ -2145,15 +2333,15 @@
                                 <div className="flex flex-col gap-6">
                                   <div className="flex flex-col gap-2 mt-1">
                                     <label className="text-[14px] font-bold text-gray-900">Nama</label>
-                                    <input type="text" value={formData.teamStructure.clientPICName} onChange={(e) => handleNestedChange('teamStructure', 'clientPICName', e.target.value)} className="w-full outline-none border-b-2 border-gray-200 pb-2 text-[15px] bg-transparent focus:border-blue-600 transition-colors px-1" placeholder="Nama PIC Klien"/>
+                                    <input type="text" value={formData.teamStructure.clientPICName} onChange={(e) => handleNestedChange('teamStructure', 'clientPICName', e.target.value)} className={`w-full outline-none border-b-2 pb-2 text-[15px] focus:border-blue-600 transition-colors px-1 ${pageErrors[1] && !formData.teamStructure.clientPICName ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-transparent'}`} placeholder="Nama PIC Klien"/>
                                   </div>
                                   <div className="flex flex-col gap-2 mt-[6px]">
                                     <label className="text-[14px] font-bold text-gray-900">Email</label>
-                                    <input type="email" value={formData.teamStructure.clientPICEmail} onChange={(e) => handleNestedChange('teamStructure', 'clientPICEmail', e.target.value)} className="w-full outline-none border-b-2 border-gray-200 pb-2 text-[15px] bg-transparent focus:border-blue-600 transition-colors px-1" placeholder="Email PIC Klien"/>
+                                    <input type="email" value={formData.teamStructure.clientPICEmail} onChange={(e) => handleNestedChange('teamStructure', 'clientPICEmail', e.target.value)} className={`w-full outline-none border-b-2 pb-2 text-[15px] focus:border-blue-600 transition-colors px-1 ${pageErrors[1] && !formData.teamStructure.clientPICEmail ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-transparent'}`} placeholder="Email PIC Klien"/>
                                   </div>
                                   <div className="flex flex-col gap-2 mt-[6px]">
                                     <label className="text-[14px] font-bold text-gray-900">No. Telp</label>
-                                    <input type="tel" value={formData.teamStructure.clientPICPhone} onChange={(e) => handleNestedChange('teamStructure', 'clientPICPhone', e.target.value)} className="w-full outline-none border-b-2 border-gray-200 pb-2 text-[15px] bg-transparent focus:border-blue-600 transition-colors px-1" placeholder="No. Telp PIC Klien"/>
+                                    <input type="tel" value={formData.teamStructure.clientPICPhone} onChange={(e) => handleNestedChange('teamStructure', 'clientPICPhone', e.target.value)} className={`w-full outline-none border-b-2 pb-2 text-[15px] focus:border-blue-600 transition-colors px-1 ${pageErrors[1] && !formData.teamStructure.clientPICPhone ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-transparent'}`} placeholder="No. Telp PIC Klien"/>
                                   </div>
                                 </div>
                               </div>
@@ -2459,7 +2647,7 @@
                                    {isExporting ? (
                                       <div className="w-full text-[13px] text-left font-medium text-gray-900">{formData.generalInfo.industry}</div>
                                    ) : (
-                                      <select value={formData.generalInfo.industry} onChange={(e) => handleNestedChange('generalInfo', 'industry', e.target.value)} className="w-full bg-gray-100 border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:border-blue-500 text-sm">
+                                      <select value={formData.generalInfo.industry} onChange={(e) => handleNestedChange('generalInfo', 'industry', e.target.value)} className={`w-full border rounded-md px-3 py-1.5 outline-none focus:border-blue-500 text-sm ${pageErrors[2] && !formData.generalInfo.industry ? 'border-red-500 bg-red-50' : 'bg-gray-100 border-gray-300'}`}>
                                          <option value="" disabled hidden>Pilih Industry...</option>
                                          {masterData.industries.map(ind => (<option key={ind} value={ind}>{ind}</option>))}
                                       </select>
@@ -2472,7 +2660,7 @@
                                    {isExporting ? (
                                       <div className="w-full text-[13px] text-left font-medium text-gray-900">{formData.generalInfo.industryType}</div>
                                    ) : (
-                                      <select value={formData.generalInfo.industryType} onChange={(e) => handleNestedChange('generalInfo', 'industryType', e.target.value)} className="w-full bg-gray-100 border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:border-blue-500 text-sm">
+                                      <select value={formData.generalInfo.industryType} onChange={(e) => handleNestedChange('generalInfo', 'industryType', e.target.value)} className={`w-full border rounded-md px-3 py-1.5 outline-none focus:border-blue-500 text-sm ${pageErrors[2] && !formData.generalInfo.industryType ? 'border-red-500 bg-red-50' : 'bg-gray-100 border-gray-300'}`}>
                                          <option value="" disabled hidden>Pilih Industry Type...</option>
                                          {masterData.industryTypes.map(type => (<option key={type} value={type}>{type}</option>))}
                                       </select>
@@ -2487,7 +2675,7 @@
                                    {isExporting ? (
                                       <div className="w-full text-[13px] text-left font-medium text-gray-900">{formData.generalInfo.project}</div>
                                    ) : (
-                                      <select value={formData.generalInfo.project} onChange={(e) => handleNestedChange('generalInfo', 'project', e.target.value)} className="w-full bg-gray-100 border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:border-blue-500 text-sm">
+                                      <select value={formData.generalInfo.project} onChange={(e) => handleNestedChange('generalInfo', 'project', e.target.value)} className={`w-full border rounded-md px-3 py-1.5 outline-none focus:border-blue-500 text-sm ${pageErrors[2] && !formData.generalInfo.project ? 'border-red-500 bg-red-50' : 'bg-gray-100 border-gray-300'}`}>
                                          <option value="" disabled hidden>Pilih Project...</option>
                                          {masterData.projects.map(proj => (<option key={proj} value={proj}>{proj}</option>))}
                                       </select>
@@ -2501,7 +2689,7 @@
                                    {isExporting ? (
                                       <div className="w-full text-[13px] text-left font-medium text-gray-900">{formData.generalInfo.package || '-'}</div>
                                    ) : (
-                                      <select value={formData.generalInfo.package} onChange={(e) => handlePackageChange(e.target.value)} className="w-full bg-gray-100 border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:border-blue-500 text-sm">
+                                      <select value={formData.generalInfo.package} onChange={(e) => handlePackageChange(e.target.value)} className={`w-full border rounded-md px-3 py-1.5 outline-none focus:border-blue-500 text-sm ${pageErrors[2] && !formData.generalInfo.package ? 'border-red-500 bg-red-50' : 'bg-gray-100 border-gray-300'}`}>
                                          <option value="" disabled hidden>Pilih Package...</option>
                                          {masterData.packages.map(pkg => (<option key={pkg.id || pkg.name} value={pkg.name}>{pkg.name}</option>))}
                                       </select>
@@ -2520,27 +2708,27 @@
                                     <td rowSpan="5" className="border border-black p-3 font-bold w-32 align-top text-gray-900">Use Case</td>
                                     <td className="border border-black p-2 w-56 text-gray-800">Marketing & Campaign</td>
                                     <td className="border border-black p-2 text-center w-12"><input type="checkbox" checked={formData.useCases.marketing} onChange={(e) => handleNestedChange('useCases', 'marketing', e.target.checked)} className="w-4 h-4 cursor-pointer" /></td>
-                                    <td className="border border-black p-0"><textarea rows="2" disabled={!formData.useCases.marketing} value={formData.useCases.marketingDetails} onChange={(e) => handleNestedChange('useCases', 'marketingDetails', e.target.value)} className="w-full h-full min-h-[44px] px-3 py-2 outline-none bg-transparent resize-y disabled:bg-gray-100 disabled:cursor-not-allowed" placeholder={formData.useCases.marketing ? "Ketik detail di sini..." : "Centang untuk mengisi"}></textarea></td>
+                                    <td className="border border-black p-0"><textarea rows="2" disabled={!formData.useCases.marketing} value={formData.useCases.marketingDetails} onChange={(e) => handleNestedChange('useCases', 'marketingDetails', e.target.value)} className={`w-full h-full min-h-[44px] px-3 py-2 outline-none resize-y disabled:bg-gray-100 disabled:cursor-not-allowed ${pageErrors[2] && formData.useCases.marketing && (!formData.useCases.marketingDetails || !formData.useCases.marketingDetails.trim()) ? 'bg-red-50 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder={formData.useCases.marketing ? "Ketik detail di sini..." : "Centang untuk mengisi"}></textarea></td>
                                 </tr>
                                 <tr className="avoid-break-row">
                                     <td className="border border-black p-2 w-56 text-gray-800">Sales</td>
                                     <td className="border border-black p-2 text-center w-12"><input type="checkbox" checked={formData.useCases.sales} onChange={(e) => handleNestedChange('useCases', 'sales', e.target.checked)} className="w-4 h-4 cursor-pointer" /></td>
-                                    <td className="border border-black p-0"><textarea rows="2" disabled={!formData.useCases.sales} value={formData.useCases.salesDetails} onChange={(e) => handleNestedChange('useCases', 'salesDetails', e.target.value)} className="w-full h-full min-h-[44px] px-3 py-2 outline-none bg-transparent resize-y disabled:bg-gray-100 disabled:cursor-not-allowed" placeholder={formData.useCases.sales ? "Ketik detail di sini..." : "Centang untuk mengisi"}></textarea></td>
+                                    <td className="border border-black p-0"><textarea rows="2" disabled={!formData.useCases.sales} value={formData.useCases.salesDetails} onChange={(e) => handleNestedChange('useCases', 'salesDetails', e.target.value)} className={`w-full h-full min-h-[44px] px-3 py-2 outline-none resize-y disabled:bg-gray-100 disabled:cursor-not-allowed ${pageErrors[2] && formData.useCases.sales && (!formData.useCases.salesDetails || !formData.useCases.salesDetails.trim()) ? 'bg-red-50 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder={formData.useCases.sales ? "Ketik detail di sini..." : "Centang untuk mengisi"}></textarea></td>
                                 </tr>
                                 <tr className="avoid-break-row">
                                     <td className="border border-black p-2 w-56 text-gray-800">Customer Service</td>
                                     <td className="border border-black p-2 text-center w-12"><input type="checkbox" checked={formData.useCases.customerService} onChange={(e) => handleNestedChange('useCases', 'customerService', e.target.checked)} className="w-4 h-4 cursor-pointer" /></td>
-                                    <td className="border border-black p-0"><textarea rows="2" disabled={!formData.useCases.customerService} value={formData.useCases.customerServiceDetails} onChange={(e) => handleNestedChange('useCases', 'customerServiceDetails', e.target.value)} className="w-full h-full min-h-[44px] px-3 py-2 outline-none bg-transparent resize-y disabled:bg-gray-100 disabled:cursor-not-allowed" placeholder={formData.useCases.customerService ? "Ketik detail di sini..." : "Centang untuk mengisi"}></textarea></td>
+                                    <td className="border border-black p-0"><textarea rows="2" disabled={!formData.useCases.customerService} value={formData.useCases.customerServiceDetails} onChange={(e) => handleNestedChange('useCases', 'customerServiceDetails', e.target.value)} className={`w-full h-full min-h-[44px] px-3 py-2 outline-none resize-y disabled:bg-gray-100 disabled:cursor-not-allowed ${pageErrors[2] && formData.useCases.customerService && (!formData.useCases.customerServiceDetails || !formData.useCases.customerServiceDetails.trim()) ? 'bg-red-50 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder={formData.useCases.customerService ? "Ketik detail di sini..." : "Centang untuk mengisi"}></textarea></td>
                                 </tr>
                                 <tr className="avoid-break-row">
                                     <td className="border border-black p-2 w-56 text-gray-800">Notification Service</td>
                                     <td className="border border-black p-2 text-center w-12"><input type="checkbox" checked={formData.useCases.notification} onChange={(e) => handleNestedChange('useCases', 'notification', e.target.checked)} className="w-4 h-4 cursor-pointer" /></td>
-                                    <td className="border border-black p-0"><textarea rows="2" disabled={!formData.useCases.notification} value={formData.useCases.notificationDetails} onChange={(e) => handleNestedChange('useCases', 'notificationDetails', e.target.value)} className="w-full h-full min-h-[44px] px-3 py-2 outline-none bg-transparent resize-y disabled:bg-gray-100 disabled:cursor-not-allowed" placeholder={formData.useCases.notification ? "Ketik detail di sini..." : "Centang untuk mengisi"}></textarea></td>
+                                    <td className="border border-black p-0"><textarea rows="2" disabled={!formData.useCases.notification} value={formData.useCases.notificationDetails} onChange={(e) => handleNestedChange('useCases', 'notificationDetails', e.target.value)} className={`w-full h-full min-h-[44px] px-3 py-2 outline-none resize-y disabled:bg-gray-100 disabled:cursor-not-allowed ${pageErrors[2] && formData.useCases.notification && (!formData.useCases.notificationDetails || !formData.useCases.notificationDetails.trim()) ? 'bg-red-50 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder={formData.useCases.notification ? "Ketik detail di sini..." : "Centang untuk mengisi"}></textarea></td>
                                 </tr>
                                 <tr className="avoid-break-row">
                                     <td className="border border-black p-2 w-56 text-gray-800">Others (please specify)</td>
                                     <td className="border border-black p-2 text-center w-12"><input type="checkbox" checked={formData.useCases.others} onChange={(e) => handleNestedChange('useCases', 'others', e.target.checked)} className="w-4 h-4 cursor-pointer" /></td>
-                                    <td className="border border-black p-0"><textarea rows="2" disabled={!formData.useCases.others} value={formData.useCases.othersSpecify} onChange={(e) => handleNestedChange('useCases', 'othersSpecify', e.target.value)} className="w-full h-full min-h-[44px] px-3 py-2 outline-none bg-transparent resize-y disabled:bg-gray-100 disabled:cursor-not-allowed" placeholder={formData.useCases.others ? "Ketik detail di sini..." : "Centang untuk mengisi"}></textarea></td>
+                                    <td className="border border-black p-0"><textarea rows="2" disabled={!formData.useCases.others} value={formData.useCases.othersSpecify} onChange={(e) => handleNestedChange('useCases', 'othersSpecify', e.target.value)} className={`w-full h-full min-h-[44px] px-3 py-2 outline-none resize-y disabled:bg-gray-100 disabled:cursor-not-allowed ${pageErrors[2] && formData.useCases.others && (!formData.useCases.othersSpecify || !formData.useCases.othersSpecify.trim()) ? 'bg-red-50 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder={formData.useCases.others ? "Ketik detail di sini..." : "Centang untuk mengisi"}></textarea></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2905,22 +3093,22 @@
                                        <tr key={`omni-${index}`} className="bg-white avoid-break-row">
                                           <td className={`border border-black text-center font-bold ${isExporting ? 'p-2' : 'p-1'}`}>{index + 1}</td>
                                           <td className={`border border-black ${isExporting ? 'p-2' : 'p-0'}`}>
-                                            {isExporting ? user.firstName || '-' : <input type="text" value={user.firstName} onChange={(e) => handleUserRowChange(index, 'firstName', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent" placeholder="Nama..."/>}
+                                            {isExporting ? user.firstName || '-' : <input type="text" value={user.firstName} onChange={(e) => handleUserRowChange(index, 'firstName', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none ${pageErrors[4] && !user.firstName ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder="Nama..."/>}
                                           </td>
                                           <td className={`border border-black ${isExporting ? 'p-2' : 'p-0'}`}>
-                                            {isExporting ? user.lastName || '-' : <input type="text" value={user.lastName} onChange={(e) => handleUserRowChange(index, 'lastName', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent" placeholder="Belakang..."/>}
+                                            {isExporting ? user.lastName || '-' : <input type="text" value={user.lastName} onChange={(e) => handleUserRowChange(index, 'lastName', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none ${pageErrors[4] && !user.lastName ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder="Belakang..."/>}
                                           </td>
                                           <td className={`border border-black ${isExporting ? 'p-2 text-center' : 'p-0'}`}>
-                                            {isExporting ? user.email || '-' : <input type="email" value={user.email} onChange={(e) => handleUserRowChange(index, 'email', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent text-center" placeholder="email@contoh.com"/>}
+                                            {isExporting ? user.email || '-' : <input type="email" value={user.email} onChange={(e) => handleUserRowChange(index, 'email', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none text-center ${pageErrors[4] && !user.email ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder="email@contoh.com"/>}
                                           </td>
                                           <td className={`border border-black ${isExporting ? 'p-2 text-center' : 'p-0'}`}>
-                                            {isExporting ? user.phone || '-' : <input type="tel" value={user.phone} onChange={(e) => handleUserRowChange(index, 'phone', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent text-center" placeholder="628..."/>}
+                                            {isExporting ? user.phone || '-' : <input type="tel" value={user.phone} onChange={(e) => handleUserRowChange(index, 'phone', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none text-center ${pageErrors[4] && !user.phone ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder="628..."/>}
                                           </td>
                                           <td className={`border border-black ${isExporting ? 'p-2 text-center font-medium' : 'p-0 relative'}`}>
                                              {isExporting ? (
                                                 user.roleOmni || '-'
                                              ) : (
-                                                <select value={user.roleOmni || ''} onChange={(e) => handleUserRowChange(index, 'roleOmni', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent cursor-pointer text-center font-medium appearance-none">
+                                                <select value={user.roleOmni || ''} onChange={(e) => handleUserRowChange(index, 'roleOmni', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none cursor-pointer text-center font-medium appearance-none ${pageErrors[4] && !user.roleOmni ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`}>
                                                    <option value="" disabled hidden>Pilih Role...</option><option value="Admin">Admin</option><option value="Supervisor">Supervisor</option><option value="Agent">Agent</option><option value="Tidak Pakai">-- Tidak Pakai --</option>
                                                 </select>
                                              )}
@@ -2971,15 +3159,15 @@
                                        return (
                                        <tr key={`crm-${index}`} className="bg-white avoid-break-row">
                                           <td className={`border border-black text-center font-bold bg-gray-50 ${isExporting ? 'p-2' : 'p-1'}`}>{index + 1}</td>
-                                          <td className={`border border-black ${isExporting ? 'p-2' : 'p-0'}`}>{isExporting ? user.firstName || '-' : <input type="text" value={user.firstName} onChange={(e) => handleCrmUserRowChange(index, 'firstName', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent" placeholder="Nama..."/>}</td>
-                                          <td className={`border border-black ${isExporting ? 'p-2' : 'p-0'}`}>{isExporting ? user.lastName || '-' : <input type="text" value={user.lastName} onChange={(e) => handleCrmUserRowChange(index, 'lastName', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent" placeholder="Belakang..."/>}</td>
-                                          <td className={`border border-black ${isExporting ? 'p-2 text-center' : 'p-0'}`}>{isExporting ? user.email || '-' : <input type="email" value={user.email} onChange={(e) => handleCrmUserRowChange(index, 'email', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent text-center" placeholder="email@contoh.com"/>}</td>
-                                          <td className={`border border-black ${isExporting ? 'p-2 text-center' : 'p-0'}`}>{isExporting ? user.phone || '-' : <input type="tel" value={user.phone} onChange={(e) => handleCrmUserRowChange(index, 'phone', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent text-center" placeholder="628..."/>}</td>
+                                          <td className={`border border-black ${isExporting ? 'p-2' : 'p-0'}`}>{isExporting ? user.firstName || '-' : <input type="text" value={user.firstName} onChange={(e) => handleCrmUserRowChange(index, 'firstName', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none ${pageErrors[4] && !user.firstName ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder="Nama..."/>}</td>
+                                          <td className={`border border-black ${isExporting ? 'p-2' : 'p-0'}`}>{isExporting ? user.lastName || '-' : <input type="text" value={user.lastName} onChange={(e) => handleCrmUserRowChange(index, 'lastName', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none ${pageErrors[4] && !user.lastName ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder="Belakang..."/>}</td>
+                                          <td className={`border border-black ${isExporting ? 'p-2 text-center' : 'p-0'}`}>{isExporting ? user.email || '-' : <input type="email" value={user.email} onChange={(e) => handleCrmUserRowChange(index, 'email', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none text-center ${pageErrors[4] && !user.email ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder="email@contoh.com"/>}</td>
+                                          <td className={`border border-black ${isExporting ? 'p-2 text-center' : 'p-0'}`}>{isExporting ? user.phone || '-' : <input type="tel" value={user.phone} onChange={(e) => handleCrmUserRowChange(index, 'phone', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none text-center ${pageErrors[4] && !user.phone ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder="628..."/>}</td>
                                           <td className={`border border-black ${isExporting ? 'p-2 text-center font-medium' : 'p-0 relative'}`}>
                                              {isExporting ? (
                                                  user.roleCrm || '-'
                                              ) : (
-                                                 <select value={user.roleCrm || ''} onChange={(e) => handleCrmUserRowChange(index, 'roleCrm', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent cursor-pointer text-center font-medium appearance-none"><option value="" disabled hidden>Pilih Role...</option><option value="Admin">Admin</option><option value="Manager">Manager</option><option value="SPV">SPV</option><option value="Agent">Agent</option><option value="Tidak Pakai">-- Tidak Pakai --</option></select>
+                                                 <select value={user.roleCrm || ''} onChange={(e) => handleCrmUserRowChange(index, 'roleCrm', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none cursor-pointer text-center font-medium appearance-none ${pageErrors[4] && !user.roleCrm ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`}><option value="" disabled hidden>Pilih Role...</option><option value="Admin">Admin</option><option value="Manager">Manager</option><option value="SPV">SPV</option><option value="Agent">Agent</option><option value="Tidak Pakai">-- Tidak Pakai --</option></select>
                                              )}
                                           </td>
                                           <td className={`border border-black ${isExporting ? 'p-2 text-center' : 'p-0'}`}>
@@ -3187,22 +3375,22 @@
                                        <tr key={`cc-${index}`} className="bg-white avoid-break-row">
                                           <td className={`border border-black text-center font-bold ${isExporting ? 'p-2' : 'p-1'}`}>{index + 1}</td>
                                           <td className={`border border-black ${isExporting ? 'p-2' : 'p-0'}`}>
-                                             {isExporting ? user.firstName || '-' : <input type="text" value={user.firstName} onChange={(e) => handleCallCenterUserChange(index, 'firstName', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent" placeholder="Nama..."/>}
+                                             {isExporting ? user.firstName || '-' : <input type="text" value={user.firstName} onChange={(e) => handleCallCenterUserChange(index, 'firstName', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none ${pageErrors[4] && !user.firstName ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder="Nama..."/>}
                                           </td>
                                           <td className={`border border-black ${isExporting ? 'p-2' : 'p-0'}`}>
-                                             {isExporting ? user.lastName || '-' : <input type="text" value={user.lastName} onChange={(e) => handleCallCenterUserChange(index, 'lastName', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent" placeholder="Belakang..."/>}
+                                             {isExporting ? user.lastName || '-' : <input type="text" value={user.lastName} onChange={(e) => handleCallCenterUserChange(index, 'lastName', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none ${pageErrors[4] && !user.lastName ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder="Belakang..."/>}
                                           </td>
                                           <td className={`border border-black ${isExporting ? 'p-2 text-center' : 'p-0'}`}>
-                                             {isExporting ? user.email || '-' : <input type="email" value={user.email} onChange={(e) => handleCallCenterUserChange(index, 'email', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent text-center" placeholder="email@contoh.com"/>}
+                                             {isExporting ? user.email || '-' : <input type="email" value={user.email} onChange={(e) => handleCallCenterUserChange(index, 'email', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none text-center ${pageErrors[4] && !user.email ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder="email@contoh.com"/>}
                                           </td>
                                           <td className={`border border-black ${isExporting ? 'p-2 text-center' : 'p-0'}`}>
-                                             {isExporting ? user.phone || '-' : <input type="tel" value={user.phone} onChange={(e) => handleCallCenterUserChange(index, 'phone', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent text-center" placeholder="628..."/>}
+                                             {isExporting ? user.phone || '-' : <input type="tel" value={user.phone} onChange={(e) => handleCallCenterUserChange(index, 'phone', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none text-center ${pageErrors[4] && !user.phone ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`} placeholder="628..."/>}
                                           </td>
                                           <td className={`border border-black ${isExporting ? 'p-2 text-center font-medium' : 'p-0 relative'}`}>
                                              {isExporting ? (
                                                  user.role || '-'
                                              ) : (
-                                                 <select value={user.role || ''} onChange={(e) => handleCallCenterUserChange(index, 'role', e.target.value)} className="w-full h-full min-h-[30px] p-2 outline-none bg-transparent cursor-pointer text-center font-medium appearance-none">
+                                                 <select value={user.role || ''} onChange={(e) => handleCallCenterUserChange(index, 'role', e.target.value)} className={`w-full h-full min-h-[30px] p-2 outline-none cursor-pointer text-center font-medium appearance-none ${pageErrors[4] && !user.role ? 'bg-red-100 ring-inset ring-2 ring-red-500' : 'bg-transparent'}`}>
                                                     <option value="" disabled hidden>Pilih Role...</option>
                                                     <option value="Admin">Admin</option>
                                                     <option value="Member">Member</option>
